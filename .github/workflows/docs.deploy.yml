@@ -45,6 +45,9 @@ jobs:
       - name: Setup workspace
         uses: ./.github/actions/setup
 
+      - name: Build packages for the hosted demo
+        run: pnpm build
+
       - name: Check documentation config types
         run: pnpm lint:docs
 

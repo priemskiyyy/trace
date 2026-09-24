@@ -236,6 +236,30 @@ test("a receipt is dropped at once as reentrant when an adapter tracks from insi
   expect(mock.sessions[0]?.events).toHaveLength(1);
 });
 
+test("a receipt is dropped at once as reentrant when a diagnostics listener tracks", async () => {
+  const mock = createMockAdapter();
+  const trace = new Trace({ events, destinations: { product: mock.adapter } });
+  const inner: Receipt[] = [];
+
+  trace.start();
+  trace.diagnostics.events.subscribe(({ type }) => {
+    if (type === "event accepted" && inner.length === 0) {
+      inner.push(trace.track("App Opened"));
+    }
+  });
+  trace.track("App Opened");
+
+  expect(inner[0]?.status.get()).toEqual({
+    state: "dropped",
+    reason: "reentrant",
+  });
+  await expect(inner[0]?.settled).resolves.toEqual({
+    state: "dropped",
+    reason: "reentrant",
+  });
+  expect(mock.sessions[0]?.events).toHaveLength(1);
+});
+
 test("a receipt is dropped at once as sanitizer-failed when redact throws", () => {
   const mock = createMockAdapter();
 

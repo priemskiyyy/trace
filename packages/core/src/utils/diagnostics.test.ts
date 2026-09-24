@@ -1,6 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 
 import { createMockAdapter } from "src/mock/createMockAdapter";
+import type { Receipt } from "src/types/Receipt";
 import type { TraceDiagnosticEvent } from "src/types/TraceDiagnosticEvent";
 import { event } from "src/utils/event";
 import { Trace } from "src/utils/Trace";
@@ -393,4 +394,95 @@ test("a receipt listener that disposes the Trace while a switch drops the previo
     status: { state: "disposed" },
     pendingReceipts: 0,
   });
+});
+
+test("a track dropped as reentrant inside an events listener or an adapter call still reaches diagnostics listeners as event dropped", () => {
+  const inner: Receipt[] = [];
+
+  const mock = createMockAdapter({
+    onTrack: () => {
+      inner.push(trace.track("App Opened"));
+    },
+  });
+
+  const trace = new Trace({ events, destinations: { product: mock.adapter } });
+  const dropped: Array<{ event: string | null; context: unknown }> = [];
+
+  trace.diagnostics.events.subscribe(({ type, event: tracked, context }) => {
+    if (type === "event dropped") {
+      dropped.push({ event: tracked?.id ?? null, context });
+    }
+  });
+  trace.events.subscribe(() => {
+    inner.push(trace.track("App Opened"));
+  });
+  trace.start();
+  trace.track("App Opened");
+
+  expect(dropped).toStrictEqual([
+    {
+      event: inner[0]?.id ?? null,
+      context: { name: "App Opened", reason: "reentrant" },
+    },
+    {
+      event: inner[1]?.id ?? null,
+      context: { name: "App Opened", reason: "reentrant" },
+    },
+  ]);
+});
+
+test("a diagnostics listener that tracks on every diagnostic makes one track, dropped as reentrant, hears only the diagnostics of the event that set it off, and the call returns", () => {
+  const trace = new Trace({
+    events,
+    destinations: { product: createMockAdapter().adapter },
+  });
+
+  const heard: Array<{ type: string; event: string | null }> = [];
+  const receipts: Receipt[] = [];
+
+  trace.diagnostics.events.subscribe(({ type, event: tracked }) => {
+    heard.push({ type, event: tracked?.id ?? null });
+
+    if (receipts.length < 10) {
+      receipts.push(trace.track("App Opened"));
+    }
+  });
+
+  const original = trace.track("App Opened");
+
+  expect(heard).toStrictEqual([{ type: "event accepted", event: original.id }]);
+  expect(receipts.map((receipt) => receipt.status.get())).toStrictEqual([
+    { state: "dropped", reason: "reentrant" },
+  ]);
+});
+
+test("a diagnostics listener that tracks while the Trace is disposed hears none of its own drops, and disposal returns", () => {
+  const trace = new Trace({
+    events,
+    destinations: { product: createMockAdapter().adapter },
+  });
+
+  const heard: string[] = [];
+  const receipts: Receipt[] = [];
+
+  trace.track("App Opened");
+  trace.diagnostics.events.subscribe(({ type }) => {
+    heard.push(type);
+
+    if (receipts.length < 10) {
+      receipts.push(trace.track("App Opened"));
+    }
+  });
+  trace.dispose();
+
+  expect(heard).toStrictEqual([
+    "destination disposed",
+    "event dropped",
+    "trace disposed",
+  ]);
+  expect(receipts.map((receipt) => receipt.status.get())).toStrictEqual([
+    { state: "dropped", reason: "disposed" },
+    { state: "dropped", reason: "disposed" },
+    { state: "dropped", reason: "disposed" },
+  ]);
 });

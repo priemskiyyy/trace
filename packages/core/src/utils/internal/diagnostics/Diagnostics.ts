@@ -139,6 +139,8 @@ export class Diagnostics {
     },
   };
 
+  isDelivering = () => this.#delivering;
+
   record = (record: DiagnosticRecord) => {
     if (this.#eventListeners.size === 0 || this.#state.state === "DISPOSED") {
       return;

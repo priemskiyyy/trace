@@ -276,7 +276,9 @@ export class Trace<
 
   /**
    * A passive view for devtools: a snapshot of the runtime and a timeline of
-   * events that carry no payload. Observing it opens nothing and creates no event.
+   * events that carry no payload. Observing it opens nothing and creates no
+   * event, and a `track` made from one of its listeners is dropped as
+   * `reentrant` without a diagnostic.
    *
    * @example
    * ```ts
@@ -722,7 +724,7 @@ export class Trace<
       return this.#drop(id, name, "disposed");
     }
 
-    if (this.#depth > 0) {
+    if (this.#depth > 0 || this.#diagnostics.isDelivering()) {
       return this.#drop(id, name, "reentrant");
     }
 
@@ -928,10 +930,13 @@ export class Trace<
     reason: DropReason,
     issues: { path: string; message: string }[] = [],
   ) {
-    this.#record("event", DIAGNOSTIC_TYPES.EVENT_DROPPED, id, {
-      name: typeof name === "string" ? name : null,
-      reason,
-    });
+    // A listener that tracks on each diagnostic would otherwise hear its own drop and track again.
+    if (!this.#diagnostics.isDelivering()) {
+      this.#record("event", DIAGNOSTIC_TYPES.EVENT_DROPPED, id, {
+        name: typeof name === "string" ? name : null,
+        reason,
+      });
+    }
 
     return createDroppedReceipt<DestinationName<TDestinations>>({
       id,

@@ -1,0 +1,33 @@
+{
+  "name": "example-vue",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vue-tsc --noEmit -p . && vite build",
+    "preview": "vite preview",
+    "lint:typescript": "vue-tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@priemskiyyy/trace": "workspace:*",
+    "@priemskiyyy/trace-amplitude": "workspace:*",
+    "@priemskiyyy/trace-devtools": "workspace:*",
+    "@priemskiyyy/trace-google-analytics": "workspace:*",
+    "@priemskiyyy/trace-http": "workspace:*",
+    "@priemskiyyy/trace-mixpanel": "workspace:*",
+    "@priemskiyyy/trace-posthog": "workspace:*",
+    "@priemskiyyy/trace-segment": "workspace:*",
+    "@priemskiyyy/trace-vue": "workspace:*",
+    "class-variance-authority": "0.7.1",
+    "example-shared": "workspace:*",
+    "vue": "3.5.42"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@vitejs/plugin-vue": "6.0.9",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.8.3",
+    "vite": "8.3.0",
+    "vue-tsc": "3.3.11"
+  }
+}

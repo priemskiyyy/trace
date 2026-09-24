@@ -1,0 +1,61 @@
+{
+  "name": "@priemskiyyy/trace-segment-node",
+  "version": "0.1.0",
+  "description": "Segment destination for Trace on the server: each event is one track call for its user and anonymous id, with its timestamp and message id, over the analytics-node client you inject.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priemskiyyy/trace.git",
+    "directory": "packages/adapters/segment-node"
+  },
+  "bugs": {
+    "url": "https://github.com/priemskiyyy/trace/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint:typescript": "tsc --noEmit -p .",
+    "lint:eslint": "eslint src",
+    "test:unit": "vitest run --root ../../.. --project segment-node"
+  },
+  "peerDependencies": {
+    "@priemskiyyy/trace": ">=0.1.0 <0.2",
+    "@segment/analytics-node": ">=3.1.0 <4"
+  },
+  "peerDependenciesMeta": {
+    "@segment/analytics-node": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@priemskiyyy/trace": "workspace:*"
+  },
+  "keywords": [
+    "segment",
+    "customer-data-platform",
+    "node",
+    "server",
+    "typescript",
+    "trace",
+    "adapter"
+  ],
+  "homepage": "https://priemskiyyy.github.io/trace/"
+}

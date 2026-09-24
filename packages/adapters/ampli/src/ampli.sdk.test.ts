@@ -969,7 +969,7 @@ test("an upload Amplitude refuses makes the flush failed with DELIVERY_FAILED", 
           name: "TraceError",
           code: "DELIVERY_FAILED",
           message:
-            "Amplitude did not accept 1 of the uploads this flush waited for.",
+            "Amplitude did not accept 1 of this destination's uploads since the last flush.",
         }),
       },
     },

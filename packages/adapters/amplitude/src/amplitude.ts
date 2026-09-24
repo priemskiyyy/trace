@@ -6,9 +6,8 @@ import type { AmplitudeLike } from "src/types/AmplitudeLike";
 import { applyGroup } from "src/utils/applyGroup";
 import { applyPinnedCall } from "src/utils/applyPinnedCall";
 import { applyTraits } from "src/utils/applyTraits";
-import { createPendingUploads } from "src/utils/createPendingUploads";
+import { createUploads } from "src/utils/createUploads";
 import { getAmplitudeProperties } from "src/utils/getAmplitudeProperties";
-import { getFlushResult } from "src/utils/getFlushResult";
 
 /**
  * Sends each event to Amplitude as one `track` call with its time and its id
@@ -51,7 +50,7 @@ export const amplitude = <TSdk extends AmplitudeLike>(
       });
     }
 
-    const uploads = createPendingUploads();
+    const uploads = createUploads();
 
     return {
       native: sdk,
@@ -88,7 +87,7 @@ export const amplitude = <TSdk extends AmplitudeLike>(
       collection: (enabled) => {
         sdk.setOptOut(!enabled);
       },
-      flush: () => getFlushResult(sdk.flush().promise, uploads.values()),
+      flush: ({ signal }) => uploads.flush(sdk.flush().promise, signal),
     };
   },
 });

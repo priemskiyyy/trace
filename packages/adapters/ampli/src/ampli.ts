@@ -4,9 +4,8 @@ import type { AnalyticsAdapter } from "@priemskiyyy/trace";
 import type { AmpliAdapterOptions } from "src/types/AmpliAdapterOptions";
 import type { AmpliLike } from "src/types/AmpliLike";
 import { createIdentify } from "src/utils/createIdentify";
-import { createPendingUploads } from "src/utils/createPendingUploads";
+import { createUploads } from "src/utils/createUploads";
 import { getAmplitudeProperties } from "src/utils/getAmplitudeProperties";
-import { getFlushResult } from "src/utils/getFlushResult";
 import { getPinnedOptions } from "src/utils/getPinnedOptions";
 
 /**
@@ -55,7 +54,7 @@ export const ampli = <TSdk extends AmpliLike>({
       });
     }
 
-    const uploads = createPendingUploads();
+    const uploads = createUploads();
 
     return {
       native: sdk,
@@ -104,7 +103,7 @@ export const ampli = <TSdk extends AmpliLike>({
       collection: (enabled) => {
         sdk.client.setOptOut(!enabled);
       },
-      flush: () => getFlushResult(sdk.client.flush().promise, uploads.values()),
+      flush: ({ signal }) => uploads.flush(sdk.client.flush().promise, signal),
     };
   },
 });

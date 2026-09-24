@@ -701,7 +701,7 @@ test("a flush over the real SDK answers failed when Amplitude refuses the upload
     error: new TraceError({
       code: "DELIVERY_FAILED",
       message:
-        "Amplitude did not accept 1 of the uploads this flush waited for.",
+        "Amplitude did not accept 1 of this destination's uploads since the last flush.",
     }),
   });
 });

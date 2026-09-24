@@ -111,7 +111,7 @@ const DELIVERY_FAILED = (refused: number) =>
   expect.objectContaining({
     name: "TraceError",
     code: "DELIVERY_FAILED",
-    message: `Amplitude did not accept ${refused} of the uploads this flush waited for.`,
+    message: `Amplitude did not accept ${refused} of this destination's uploads since the last flush.`,
   });
 
 test("creating the adapter calls nothing on the Ampli wrapper and leaves the plugin to the application", () => {

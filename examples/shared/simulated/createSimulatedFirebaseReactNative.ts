@@ -12,16 +12,18 @@ export const createSimulatedFirebaseReactNative = () => {
   const inbox = createEventLog<ProviderCall>(20);
   const userId = createValueStore<string | null>(null);
   const collecting = createValueStore(true);
+  let nextId = 1;
 
   const analytics = {
     logEvent: (name: string, parameters: Record<string, unknown>) => {
       inbox.add({
-        id: crypto.randomUUID(),
+        id: `firebase_${nextId}`,
         eventName: name,
         user: userId.get(),
         body: parameters,
         at: Date.now(),
       });
+      nextId += 1;
 
       return Promise.resolve();
     },

@@ -8,16 +8,18 @@ export const createSimulatedMixpanelReactNative = () => {
   const inbox = createEventLog<ProviderCall>(20);
   let distinctId = "anonymous";
   let groups: Record<string, string> = {};
+  let nextId = 1;
 
   const sdk = {
     track: (name: string, properties: Record<string, unknown>) => {
       inbox.add({
-        id: crypto.randomUUID(),
+        id: `mixpanel_${nextId}`,
         eventName: name,
         user: distinctId,
         body: properties,
         at: Date.now(),
       });
+      nextId += 1;
     },
     identify: (id: string) => {
       distinctId = id;

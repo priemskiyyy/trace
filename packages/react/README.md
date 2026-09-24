@@ -14,6 +14,8 @@ pnpm add @priemskiyyy/trace @priemskiyyy/trace-react
 
 Create and start the Trace outside React, as early as your application allows, register it, then publish it:
 
+<!-- snippet: fragment -->
+
 ```tsx
 import { Trace, event } from "@priemskiyyy/trace";
 import { console } from "@priemskiyyy/trace-console";
@@ -62,11 +64,19 @@ Publishes one Trace to the tree below, and does nothing else. The Trace owns its
 ```tsx
 import { useTrace } from "@priemskiyyy/trace-react";
 
-export const CheckoutButton = ({ cart }: { cart: { id: string } }) => {
+export const CheckoutButton = ({
+  cart,
+}: {
+  cart: { id: string; value: number };
+}) => {
   const trace = useTrace();
 
   const handleCheckoutPress = () => {
-    trace.track("Checkout Started", { cart: { id: cart.id } });
+    trace.track("Checkout Started", {
+      cart: { id: cart.id },
+      value: cart.value,
+      currency: "EUR",
+    });
   };
 
   return <button onClick={handleCheckoutPress}>Check out</button>;

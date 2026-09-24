@@ -118,6 +118,8 @@ export const log = ({ sdk }: { sdk: LogLike }): AnalyticsAdapter<LogLike> => ({
 
 Then hold it to the contract in its `src/conformance.test.ts`:
 
+<!-- snippet: fragment -->
+
 ```ts
 import { testAnalyticsAdapter } from "@priemskiyyy/trace/testing";
 

@@ -14,10 +14,9 @@ pnpm add @priemskiyyy/trace @priemskiyyy/trace-solid
 
 Create and start the Trace outside Solid, as early as your application allows, register it, then publish it:
 
-```tsx
+```ts
 import { Trace, event } from "@priemskiyyy/trace";
 import { console } from "@priemskiyyy/trace-console";
-import { TraceProvider } from "@priemskiyyy/trace-solid";
 
 export const trace = new Trace({
   events: {
@@ -35,6 +34,12 @@ declare module "@priemskiyyy/trace-solid" {
 }
 
 trace.start();
+```
+
+<!-- snippet: fragment -->
+
+```tsx
+import { TraceProvider } from "@priemskiyyy/trace-solid";
 
 export const Root = () => (
   <TraceProvider trace={trace}>
@@ -103,6 +108,8 @@ createEffect(() => {
 One destination's status: `idle`, `ready`, `failed` or `disposed`. `ready` means locally usable, not that a network is reachable. The name may be a string or an accessor, and a name that changes is followed; a name that recomputes to the same destination keeps its listeners. A name the Trace was not built with throws the core's `TraceError` `INVALID_CONFIGURATION` while the component is created; once the Trace is registered, the types refuse such a name.
 
 ## useConsent
+
+<!-- snippet: fragment -->
 
 ```tsx
 import { useConsent, useTrace } from "@priemskiyyy/trace-solid";

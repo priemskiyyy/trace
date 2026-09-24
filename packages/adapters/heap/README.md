@@ -19,9 +19,15 @@ import { event, Trace } from "@priemskiyyy/trace";
 import { heap } from "@priemskiyyy/trace-heap";
 import type { HeapLike } from "@priemskiyyy/trace-heap";
 
+declare global {
+  interface Window {
+    heap: HeapLike & { onReady: (callback: () => void) => void };
+  }
+}
+
 const currentHeap: HeapLike = {
   get loaded() {
-    return window.heap.loaded;
+    return window.heap.loaded === true;
   },
   track: (name, properties) => window.heap.track(name, properties),
   identify: (identity) => window.heap.identify(identity),

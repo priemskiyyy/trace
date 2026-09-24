@@ -12,6 +12,8 @@ Generate the wrapper with `ampli pull`, as Amplitude documents.
 
 ## Create a Trace
 
+<!-- snippet: fragment -->
+
 ```ts
 import * as amplitude from "@amplitude/analytics-browser";
 import { Trace } from "@priemskiyyy/trace";
@@ -118,6 +120,8 @@ Amplitude's `Identify` drops a whole trait for a `null` anywhere inside it, a bo
 ## Consent
 
 Amplitude collects from `ampli.load()` on, so when consent gates this destination, load the wrapper opted out:
+
+<!-- snippet: fragment -->
 
 ```ts
 await Ampli.ampli.load({

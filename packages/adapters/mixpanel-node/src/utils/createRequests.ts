@@ -1,5 +1,5 @@
 import { TraceError } from "@priemskiyyy/trace";
-import type { FlushResult } from "@priemskiyyy/trace";
+import type { FlushContext, FlushResult } from "@priemskiyyy/trace";
 
 type Call = (callback: (error: Error | undefined) => void) => void;
 
@@ -20,6 +20,7 @@ export const createRequests = () => {
   const pending = new Set<Promise<void>>();
   let queued = Promise.resolve();
   let refused = 0;
+  let reported = 0;
 
   const watch = (request: Promise<void>) => {
     pending.add(request);
@@ -41,11 +42,15 @@ export const createRequests = () => {
     queue: (call: Call) => {
       queued = watch(queued.then(() => start(call))).catch(() => {});
     },
-    flush: () =>
-      Promise.allSettled(pending).then((): FlushResult => {
-        const count = refused;
+    flush: ({ signal }: FlushContext) => {
+      const since = reported;
 
-        refused = 0;
+      return Promise.allSettled(pending).then((): FlushResult => {
+        const count = refused - since;
+
+        if (!signal.aborted) {
+          reported = refused;
+        }
 
         if (count === 0) {
           return { status: "flushed" };
@@ -58,6 +63,7 @@ export const createRequests = () => {
             message: `Mixpanel did not accept ${count} of the requests sent since the last flush.`,
           }),
         };
-      }),
+      });
+    },
   };
 };

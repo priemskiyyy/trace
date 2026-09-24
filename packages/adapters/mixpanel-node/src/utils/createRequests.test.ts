@@ -34,6 +34,11 @@ const getDeliveryFailed = (count: number) => ({
   }),
 });
 
+const createFlushContext = (signal = new AbortController().signal) => ({
+  timeout: 1_000,
+  signal,
+});
+
 const nextMacrotask = () =>
   new Promise((resolve) => {
     setImmediate(resolve);
@@ -134,7 +139,9 @@ test("a queued call that throws counts as refused, and the request queued after 
 
   next.answer();
 
-  await expect(requests.flush()).resolves.toStrictEqual(getDeliveryFailed(1));
+  await expect(requests.flush(createFlushContext())).resolves.toStrictEqual(
+    getDeliveryFailed(1),
+  );
 });
 
 test("flush waits for every request sent or queued before it, one that has not started yet included, and answers flushed once Mixpanel accepted them all", async () => {
@@ -147,7 +154,7 @@ test("flush waits for every request sent or queued before it, one that has not s
   requests.queue(first.call);
   requests.queue(second.call);
 
-  const flushing = watch(requests.flush());
+  const flushing = watch(requests.flush(createFlushContext()));
 
   sent.answer();
   await nextMacrotask();
@@ -173,7 +180,7 @@ test("flush answers failed with DELIVERY_FAILED, counting the requests Mixpanel 
   requests.send(refused.call);
   requests.queue(queued.call);
 
-  const flushing = requests.flush();
+  const flushing = requests.flush(createFlushContext());
 
   await nextMacrotask();
   accepted.answer();
@@ -192,15 +199,60 @@ test("a request Mixpanel refused before a flush began is reported by that flush,
     })
     .catch(() => {});
 
-  await expect(requests.flush()).resolves.toStrictEqual(getDeliveryFailed(1));
-  await expect(requests.flush()).resolves.toStrictEqual({ status: "flushed" });
+  await expect(requests.flush(createFlushContext())).resolves.toStrictEqual(
+    getDeliveryFailed(1),
+  );
+  await expect(requests.flush(createFlushContext())).resolves.toStrictEqual({
+    status: "flushed",
+  });
+});
+
+test("a flush whose signal aborts while a request is in flight, which Mixpanel then refuses, leaves the refusal to the next flush, and the one after answers flushed", async () => {
+  const requests = createRequests();
+  const request = hold();
+  const controller = new AbortController();
+
+  requests.send(request.call);
+
+  const abandoned = requests.flush(createFlushContext(controller.signal));
+
+  controller.abort();
+  request.answer(REFUSED);
+
+  await expect(abandoned).resolves.toStrictEqual(getDeliveryFailed(1));
+  await expect(requests.flush(createFlushContext())).resolves.toStrictEqual(
+    getDeliveryFailed(1),
+  );
+  await expect(requests.flush(createFlushContext())).resolves.toStrictEqual({
+    status: "flushed",
+  });
+});
+
+test("two overlapping flushes over one refused request both answer failed", async () => {
+  const requests = createRequests();
+  const request = hold();
+
+  requests.send(request.call);
+
+  const first = requests.flush(createFlushContext());
+  const second = requests.flush(createFlushContext());
+
+  request.answer(REFUSED);
+
+  await expect(Promise.all([first, second])).resolves.toStrictEqual([
+    getDeliveryFailed(1),
+    getDeliveryFailed(1),
+  ]);
+  await expect(requests.flush(createFlushContext())).resolves.toStrictEqual({
+    status: "flushed",
+  });
 });
 
 test("a request sent or queued after the flush began does not extend it", async () => {
   const requests = createRequests();
   const sent = hold();
   const queued = hold();
-  const flushing = requests.flush();
+  const flushing = requests.flush(createFlushContext());
 
   requests.send(sent.call);
   requests.queue(queued.call);
@@ -213,7 +265,9 @@ test("a request sent or queued after the flush began does not extend it", async 
 });
 
 test("a flush with nothing sent answers flushed at once", async () => {
-  await expect(createRequests().flush()).resolves.toStrictEqual({
+  await expect(
+    createRequests().flush(createFlushContext()),
+  ).resolves.toStrictEqual({
     status: "flushed",
   });
 });

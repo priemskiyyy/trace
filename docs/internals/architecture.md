@@ -26,7 +26,7 @@ Intake is separate from the lanes. `readOptions` resolves every option once, at 
 
 `track(name, properties, options)` runs these steps, and each refusal answers a receipt that is `dropped` at once:
 
-1. After `dispose()`, drop as `disposed`. From inside an adapter call or an `events` listener, drop as `reentrant`.
+1. After `dispose()`, drop as `disposed`. From inside an adapter call, an `events` listener or a listener of `diagnostics` or `diagnostics.events`, drop as `reentrant`.
 2. Take the candidates: `options.to`, else a `defaults.to` list, else every destination. When consent closes every candidate, drop as `consent` before anything is validated, sanitized or retained.
 3. Validate the properties with the event's definition. A refusal drops the event as `invalid` with the issues.
 4. Compose the context: `defaults.context`, then `trace.context()`, then the scope's, then the call's, a later layer winning per key.

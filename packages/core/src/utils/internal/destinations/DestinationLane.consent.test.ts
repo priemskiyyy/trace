@@ -649,6 +649,37 @@ test("an event that reaches the lane while a revocation's switch is held lands a
   );
 });
 
+test("an entry a status listener enqueues at ready, while the switch made at open is held, waits in the buffer and lands once when the lane is disposed", async () => {
+  const granting = createDeferred<void>();
+
+  const { adapter } = withCollection((enabled) =>
+    enabled ? granting.promise : undefined,
+  );
+
+  const { lane, enqueue, outcomes } = createLane({ adapter, gated: true });
+
+  lane.status.subscribe(() => {
+    if (lane.status.get().state === "ready") {
+      enqueue("from-listener");
+    }
+  });
+  lane.start();
+
+  expect(lane.buffered()).toBe(1);
+
+  lane.dispose();
+
+  expect(outcomes.get("from-listener")).toEqual([
+    { status: "dropped", reason: "disposed" },
+  ]);
+
+  await nextMacrotask();
+
+  expect(outcomes.get("from-listener")).toEqual([
+    { status: "dropped", reason: "disposed" },
+  ]);
+});
+
 test("the lane waits for the latest switch when consent flips again while one is held", async () => {
   const first = createDeferred<void>();
   const second = createDeferred<void>();

@@ -284,8 +284,8 @@ export class Trace<
   /**
    * A passive view for devtools: a snapshot of the runtime and a timeline of
    * events that carry no payload. Observing it opens nothing and creates no
-   * event, and a `track` made from one of its listeners is dropped as
-   * `reentrant` without a diagnostic.
+   * event, and a `track` made from a snapshot or `events` listener is dropped
+   * as `reentrant` and recorded only on its receipt.
    *
    * @example
    * ```ts

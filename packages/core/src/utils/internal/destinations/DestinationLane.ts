@@ -295,7 +295,7 @@ export class DestinationLane {
 
     const pass = this.#requestedPass ?? this.#runningPass;
 
-    const handedOff = [
+    const ahead = [
       ...boundary.map(({ handedOff }) => handedOff.promise),
       ...(pass === null ? [] : [pass.promise]),
     ];
@@ -321,7 +321,7 @@ export class DestinationLane {
     try {
       const waited = await Promise.race([
         expiry.promise,
-        Promise.all(handedOff).then(() => null),
+        Promise.all(ahead).then(() => null),
       ]);
 
       if (waited !== null) {
@@ -668,7 +668,6 @@ export class DestinationLane {
         this.#handoff(open, pending);
       }
     } finally {
-      this.#endPass();
       this.#pumping = false;
     }
   }

@@ -528,6 +528,31 @@ test("a diagnostics listener that tracks on every diagnostic makes one track, dr
   ]);
 });
 
+test("a snapshot listener that tracks on every notification makes one track, dropped as reentrant and recorded only on its receipt, and the notifications end", async () => {
+  const mock = createMockAdapter();
+  const trace = new Trace({ events, destinations: { product: mock.adapter } });
+  const heard: string[] = [];
+  const receipts: Receipt[] = [];
+
+  trace.start();
+  trace.diagnostics.events.subscribe(({ type }) => {
+    heard.push(type);
+  });
+  trace.diagnostics.subscribe(() => {
+    if (receipts.length < 10) {
+      receipts.push(trace.track("App Opened"));
+    }
+  });
+  trace.track("App Opened");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  expect(receipts.map((receipt) => receipt.status.get())).toStrictEqual([
+    { state: "dropped", reason: "reentrant" },
+  ]);
+  expect(heard).not.toContain("event dropped");
+  expect(mock.sessions[0]?.events).toHaveLength(1);
+});
+
 test("a diagnostics listener that tracks while the Trace is disposed hears none of its own drops, and disposal returns", () => {
   const trace = new Trace({
     events,

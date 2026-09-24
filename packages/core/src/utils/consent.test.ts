@@ -7,6 +7,7 @@ import type { AnalyticsAdapter } from "src/types/AnalyticsAdapter";
 import type { ConsentDecision } from "src/types/ConsentDecision";
 import type { Receipt } from "src/types/Receipt";
 import type { StandardSchema } from "src/types/StandardSchema";
+import { createDeferred } from "src/utils/common/createDeferred";
 import { event } from "src/utils/event";
 import { Trace } from "src/utils/Trace";
 
@@ -455,4 +456,42 @@ test("a stream listener that revokes consent closes the destination before the e
   expect(recorded).toEqual([
     { destination: { name: "product" }, context: { reason: "consent" } },
   ]);
+});
+
+test("a track a destination status listener makes at ready, while the switch made at open is held, settles when the Trace is disposed", () => {
+  const granting = createDeferred<void>();
+  const mock = createMockAdapter();
+
+  const adapter: AnalyticsAdapter = {
+    name: "switching",
+    open: () => ({
+      ...mock.adapter.open(),
+      collection: (enabled) => (enabled ? granting.promise : undefined),
+    }),
+  };
+
+  const trace = new Trace({
+    events,
+    destinations: { product: adapter },
+    consent: { product: ["analytics"] },
+  });
+
+  const receipts: Receipt[] = [];
+
+  trace.consent.set({ analytics: "granted" });
+  trace.destination("product").status.subscribe(() => {
+    if (trace.destination("product").status.get().state === "ready") {
+      receipts.push(trace.track("App Opened"));
+    }
+  });
+  trace.start();
+  trace.dispose();
+
+  expect(receipts.map((receipt) => receipt.status.get())).toEqual([
+    {
+      state: "settled",
+      outcomes: { product: { status: "dropped", reason: "disposed" } },
+    },
+  ]);
+  expect(mock.sessions[0]?.events).toEqual([]);
 });

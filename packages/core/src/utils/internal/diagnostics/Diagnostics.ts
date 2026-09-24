@@ -20,6 +20,7 @@ export class Diagnostics {
   #eventListeners = new Set<(event: TraceDiagnosticEvent) => void>();
   #pending: TraceDiagnosticEvent[] = [];
   #delivering = false;
+  #notifying = false;
   #scheduled = false;
 
   constructor({ read, now }: { read: () => TraceSnapshot; now: () => number }) {
@@ -71,7 +72,7 @@ export class Diagnostics {
     },
   };
 
-  isDelivering = () => this.#delivering;
+  isDelivering = () => this.#delivering || this.#notifying;
 
   record = (record: DiagnosticRecord) => {
     if (this.#eventListeners.size === 0 || this.#state.state === "DISPOSED") {
@@ -162,10 +163,14 @@ export class Diagnostics {
   }
 
   #notify() {
+    this.#notifying = true;
+
     for (const listener of [...this.#listeners]) {
       if (this.#listeners.has(listener)) {
         isolate(listener);
       }
     }
+
+    this.#notifying = false;
   }
 }

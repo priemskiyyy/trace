@@ -631,7 +631,22 @@ test("a timed-out step that rejects late also ends the stall", async () => {
   ]);
   expect(
     records.filter((record) => record.type === "identity step failed"),
-  ).toHaveLength(2);
+  ).toEqual([
+    {
+      source: "identity",
+      type: "identity step failed",
+      destination: "product",
+      event: null,
+      context: { step: "identify", reason: "timeout" },
+    },
+    {
+      source: "identity",
+      type: "identity step failed",
+      destination: "product",
+      event: "first",
+      context: { step: "reset", reason: "timeout" },
+    },
+  ]);
 });
 
 test("a step that answers late ends a stall and calls nothing until the next entry or identity change", async () => {
@@ -720,6 +735,152 @@ test("an answered step resets the count, so two timeouts with an answer between 
     "reset",
     "identify bob",
     "track fourth",
+  ]);
+});
+
+test("a step that rejects resets the count too, so a timeout, a rejection and a timeout never stall the lane", async () => {
+  vi.useFakeTimers();
+
+  let calls = 0;
+
+  const { lane, log, enqueue, outcomes, setIdentity } = createLane({
+    timeout: 1_000,
+    mock: {
+      onIdentity: () => {
+        calls += 1;
+
+        if (calls === 1 || calls === 3) {
+          return new Promise<void>(() => {});
+        }
+
+        if (calls === 2) {
+          return Promise.reject(new Error("the SDK refused"));
+        }
+      },
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  enqueue("first", ADA);
+  await vi.advanceTimersByTimeAsync(1_000);
+  enqueue("second", ADA);
+  await vi.advanceTimersByTimeAsync(0);
+  enqueue("third", ADA);
+  await vi.advanceTimersByTimeAsync(1_000);
+  enqueue("fourth", ADA);
+
+  expect(
+    ["first", "second", "third", "fourth"].map((id) => outcomes.get(id)),
+  ).toEqual([
+    [IDENTITY_FAILED],
+    [IDENTITY_FAILED],
+    [IDENTITY_FAILED],
+    [SUBMITTED],
+  ]);
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "reset",
+    "reset",
+    "reset",
+    "identify ada",
+    "track fourth",
+  ]);
+});
+
+test("a late settle that ends a stall leaves a fresh count, so one more timeout does not stall the lane again", async () => {
+  vi.useFakeTimers();
+
+  const late = createDeferred<void>();
+
+  let calls = 0;
+
+  const { lane, log, enqueue, outcomes, setIdentity } = createLane({
+    timeout: 1_000,
+    mock: {
+      onIdentity: () => {
+        calls += 1;
+
+        if (calls === 1) {
+          return late.promise;
+        }
+
+        if (calls === 2 || calls === 3) {
+          return new Promise<void>(() => {});
+        }
+      },
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  enqueue("first", ADA);
+  enqueue("second", ADA);
+  await vi.advanceTimersByTimeAsync(2_000);
+  late.resolve();
+  await vi.advanceTimersByTimeAsync(0);
+  enqueue("third", ADA);
+  await vi.advanceTimersByTimeAsync(1_000);
+  enqueue("fourth", ADA);
+
+  expect(
+    ["first", "second", "third", "fourth"].map((id) => outcomes.get(id)),
+  ).toEqual([
+    [IDENTITY_FAILED],
+    [IDENTITY_FAILED],
+    [IDENTITY_FAILED],
+    [SUBMITTED],
+  ]);
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "reset",
+    "reset",
+    "reset",
+    "identify ada",
+    "track fourth",
+  ]);
+});
+
+test("a stalled lane still hands off an entry whose plan has no steps, such as an anonymous event on a session without reset", async () => {
+  vi.useFakeTimers();
+
+  const mock = createMockAdapter({ identity: false });
+
+  const { lane, log, enqueue, outcomes, setIdentity } = createLane({
+    timeout: 1_000,
+    adapter: {
+      name: "server",
+      open: () => ({
+        ...mock.adapter.open(),
+        identify: () => new Promise<void>(() => {}),
+      }),
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  enqueue("first", ADA);
+  enqueue("second", ADA);
+  await vi.advanceTimersByTimeAsync(2_000);
+  enqueue("third", ADA);
+  setIdentity(SIGNED_OUT);
+  enqueue("anonymous", SIGNED_OUT);
+
+  expect(
+    ["first", "second", "third", "anonymous"].map((id) => outcomes.get(id)),
+  ).toEqual([
+    [IDENTITY_FAILED],
+    [IDENTITY_FAILED],
+    [IDENTITY_FAILED],
+    [SUBMITTED],
+  ]);
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "identify ada",
+    "track anonymous",
   ]);
 });
 

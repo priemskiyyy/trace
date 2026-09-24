@@ -987,6 +987,47 @@ test("flush waits for an identity pass requested behind an entry at the call, an
   ]);
 });
 
+test("an identity change made after the call, before the pass pending at the call starts, joins that pass, and the flush answers when it ends", async () => {
+  vi.useFakeTimers();
+
+  const identify = createDeferred<void>();
+
+  const { lane, mock, log, enqueue, setIdentity } = createLane({
+    mock: {
+      onIdentity: (call) =>
+        call.kind === "identify" ? identify.promise : undefined,
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  enqueue("waiting", ADA);
+  setIdentity(ADA_PRO);
+  lane.identityChanged();
+
+  const flushed = lane.flush({ timeout: 1_000 });
+
+  setIdentity({ ...ADA_PRO, traits: { plan: "pro", seats: 3 } });
+  lane.identityChanged();
+  identify.resolve();
+  await vi.advanceTimersByTimeAsync(1_000);
+
+  await expect(flushed).resolves.toEqual({ status: "flushed" });
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "track waiting",
+    "traits",
+    "flush",
+  ]);
+  expect(mock.sessions[0]?.identity.at(-1)).toEqual({
+    kind: "traits",
+    user: { id: "ada" },
+    set: { plan: "pro", seats: 3 },
+    remove: [],
+  });
+});
+
 test("a flush whose identity pass never settles answers timeout without calling the provider's flush", async () => {
   vi.useFakeTimers();
 

@@ -286,6 +286,21 @@ test("an id Mixpanel refuses rejects identify with the SDK's error", async () =>
   expect(fake.state.distinctId).toBe("$device:device-1");
 });
 
+test("a user id over 255 characters, which Mixpanel would cut, fails identify with DELIVERY_FAILED before any call, so two users sharing the part it keeps never merge", () => {
+  const { fake, session } = openSession();
+
+  expect(
+    getThrown(() => session.identify?.({ user: { id: "u".repeat(256) } })),
+  ).toStrictEqual(
+    new TraceError({
+      code: "DELIVERY_FAILED",
+      message:
+        "Mixpanel keeps the first 255 characters of a distinct id, so this user would share an identity with any id that starts the same.",
+    }),
+  );
+  expect(fake.calls).toEqual([]);
+});
+
 test("traits set the profile and unset each removed name on its own, since mixpanel-react-native's unset takes one name", () => {
   const { fake, session } = openSession();
 
@@ -448,6 +463,76 @@ test("a group type that is a name Mixpanel owns is refused before any call, join
   ]);
   expect(fake.calls).toEqual([]);
   expect(fake.state.superProperties).toEqual({});
+});
+
+test("a group type over 255 characters is refused before any call, joining or leaving, and one of 255 is kept", () => {
+  const { fake, session } = openSession();
+  const long = "t".repeat(256);
+
+  const refused = {
+    name: "TraceError",
+    code: "UNSUPPORTED",
+    message:
+      "Mixpanel would cut this group's type past 255 characters, so the membership was left out.",
+  };
+
+  expect(
+    getThrown(() =>
+      session.group?.({
+        user: null,
+        group: { type: long, id: "w_1", traits: {} },
+      }),
+    ),
+  ).toMatchObject(refused);
+  expect(
+    getThrown(() =>
+      session.group?.({
+        user: null,
+        group: { type: long, id: null, traits: {} },
+      }),
+    ),
+  ).toMatchObject(refused);
+  expect(fake.calls).toEqual([]);
+
+  session.group?.({
+    user: null,
+    group: { type: "t".repeat(255), id: "w_1", traits: {} },
+  });
+
+  expect(fake.calls).toEqual([
+    { method: "setGroup", args: ["t".repeat(255), "w_1"] },
+  ]);
+});
+
+test("a membership whose group id Mixpanel would cut sends no group request, leaves the type as a super property and on the profile, and the step throws UNSUPPORTED", () => {
+  const { fake, session } = openSession();
+  const id = "w".repeat(256);
+
+  session.group?.({
+    user: null,
+    group: { type: "workspace", id: "w_1", traits: {} },
+  });
+
+  const refusal = getThrown(() =>
+    session.group?.({
+      user: null,
+      group: { type: "workspace", id, traits: {} },
+    }),
+  );
+
+  expect(refusal).toBeInstanceOf(TraceError);
+  expect(refusal).toMatchObject({
+    code: "UNSUPPORTED",
+    message:
+      "Mixpanel would cut this group's id past 255 characters, so the membership was left out and any earlier group of this type was left.",
+  });
+  expect(fake.calls).toEqual([
+    { method: "setGroup", args: ["workspace", "w_1"] },
+    { method: "unregisterSuperProperty", args: ["workspace"] },
+    { method: "people.unset", args: ["workspace"] },
+  ]);
+  expect(fake.state.superProperties).toEqual({});
+  expect(fake.state.profile).toEqual({});
 });
 
 test("leaving a group unregisters its super property and unsets it on the profile, never through removeGroup, which needs the id being left", () => {

@@ -133,7 +133,7 @@ test("an event keeps fewer than 255 properties with its time and id, so past the
   ]);
 });
 
-test("a list or object property whose JSON as sent passes 8,000 bytes is left out as a truncated loss, strings counted whole", () => {
+test("a list or object property whose JSON as sent passes 8,000 bytes is left out as an invalid loss, strings counted whole", () => {
   const fits = range(26).map(() => "x".repeat(300));
   const overflows = range(27).map(() => "x".repeat(300));
 
@@ -155,13 +155,13 @@ test("a list or object property whose JSON as sent passes 8,000 bytes is left ou
         path: `properties.fits.${index}`,
         reason: "truncated",
       })),
-      { path: "properties.overflows", reason: "truncated" },
-      { path: "context.tooLarge", reason: "truncated" },
+      { path: "properties.overflows", reason: "invalid" },
+      { path: "context.tooLarge", reason: "invalid" },
     ],
   });
 });
 
-test("a list property of exactly 8,000 bytes as sent is kept, and one byte more is left out", () => {
+test("a list property of exactly 8,000 bytes as sent is kept, and one byte more is left out as invalid", () => {
   const list = (last: number) => [
     ...range(30).map(() => "x".repeat(255)),
     "x".repeat(200),
@@ -176,7 +176,7 @@ test("a list property of exactly 8,000 bytes as sent is kept, and one byte more 
     ),
   ).toEqual({
     properties: { time: NOW, $insert_id: EVENT_ID, atLimit: list(53) },
-    losses: [{ path: "properties.overLimit", reason: "truncated" }],
+    losses: [{ path: "properties.overLimit", reason: "invalid" }],
   });
 });
 

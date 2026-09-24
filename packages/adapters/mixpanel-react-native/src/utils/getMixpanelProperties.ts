@@ -54,7 +54,7 @@ export const getMixpanelProperties = ({
       getSentSize(mapped.value) > MAX_PROPERTY_SIZE;
 
     if (isTooLarge) {
-      losses.push({ path, reason: "truncated" });
+      losses.push({ path, reason: "invalid" });
 
       continue;
     }

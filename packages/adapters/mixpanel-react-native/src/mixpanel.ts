@@ -3,7 +3,12 @@ import type { AnalyticsAdapter, TrackResult } from "@priemskiyyy/trace";
 
 import type { MixpanelAdapterOptions } from "src/types/MixpanelAdapterOptions";
 import type { MixpanelLike } from "src/types/MixpanelLike";
-import { MAX_EVENT_AGE, MAX_EVENT_SIZE } from "src/utils/constants/limits";
+import {
+  MAX_EVENT_AGE,
+  MAX_EVENT_SIZE,
+  MAX_NAME_LENGTH,
+  MAX_STRING_LENGTH,
+} from "src/utils/constants/limits";
 import { getMixpanelProperties } from "src/utils/getMixpanelProperties";
 import { getProfileUpdate } from "src/utils/getProfileUpdate";
 import { getSentSize } from "src/utils/getSentSize";
@@ -65,7 +70,16 @@ export const mixpanel = <TSdk extends MixpanelLike>({
 
       return { status: "submitted", evidence: "sdk-call-returned", losses };
     },
-    identify: ({ user }) => sdk.identify(user.id),
+    identify: ({ user }) => {
+      if (user.id.length > MAX_STRING_LENGTH) {
+        throw new TraceError({
+          code: "DELIVERY_FAILED",
+          message: `Mixpanel keeps the first ${MAX_STRING_LENGTH} characters of a distinct id, so this user would share an identity with any id that starts the same.`,
+        });
+      }
+
+      return sdk.identify(user.id);
+    },
     traits: ({ set, remove }) => {
       const update = getProfileUpdate({ set, remove });
 
@@ -95,12 +109,28 @@ export const mixpanel = <TSdk extends MixpanelLike>({
         });
       }
 
+      if (type.length > MAX_NAME_LENGTH) {
+        throw new TraceError({
+          code: "UNSUPPORTED",
+          message:
+            "Mixpanel would cut this group's type past 255 characters, so the membership was left out.",
+        });
+      }
+
       // removeGroup needs the id being left, which a leave does not carry.
-      if (id === null) {
+      if (id === null || id.length > MAX_STRING_LENGTH) {
         sdk.unregisterSuperProperty(type);
         sdk.getPeople().unset(type);
 
-        return;
+        if (id === null) {
+          return;
+        }
+
+        throw new TraceError({
+          code: "UNSUPPORTED",
+          message:
+            "Mixpanel would cut this group's id past 255 characters, so the membership was left out and any earlier group of this type was left.",
+        });
       }
 
       sdk.setGroup(type, id);

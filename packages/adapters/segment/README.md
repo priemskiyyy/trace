@@ -62,7 +62,7 @@ Segment takes any JSON, `null` included, so nothing is lost on values. The limit
 
 analytics-next reports a refused event only through its own `delivery_failure` error event, never to the caller, which is why the adapter checks the size first. It adds its own context, such as the page, the user agent and the library, which the adapter cannot count, so the measure is a lower bound, and an event just under the limit can still be refused. What Segment's servers do past a limit is not verified here.
 
-Losses follow the event's shape: the properties first, then the context.
+Losses follow the event's shape: the properties first, then the context, then the whole event's size last.
 
 [http-api]: https://www.twilio.com/docs/segment/connections/sources/catalog/libraries/server/http-api
 

@@ -211,7 +211,7 @@ test("null members, which RudderStack leaves out, do not count toward its 32 KB,
   expect(getMethods(fake)).toStrictEqual(["track"]);
 });
 
-test("losses follow the event's shape: the properties' size first, then each property's, then the context's", () => {
+test("losses follow the event's shape: each property's first, then the context's, then the whole event's size last", () => {
   const answer = open().track(
     createTrackedEvent({
       properties: {
@@ -228,9 +228,9 @@ test("losses follow the event's shape: the properties' size first, then each pro
     status: "dropped",
     reason: "provider-filtered",
     losses: [
-      { path: "properties", reason: "invalid" },
       { path: "properties.id", reason: "invalid" },
       { path: "context.plan", reason: "omitted" },
+      { path: "properties", reason: "invalid" },
     ],
   });
 });

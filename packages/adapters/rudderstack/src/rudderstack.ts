@@ -53,7 +53,7 @@ export const rudderstack = <TSdk extends RudderStackLike>({
           return {
             status: "dropped",
             reason: "provider-filtered",
-            losses: [{ path: "properties", reason: "invalid" }, ...losses],
+            losses: [...losses, { path: "properties", reason: "invalid" }],
           };
         }
 

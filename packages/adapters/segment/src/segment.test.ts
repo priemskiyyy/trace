@@ -182,7 +182,7 @@ test("the size counts UTF-8 bytes, so text of fewer than 32,768 characters can s
   expect(fake.calls).toStrictEqual([]);
 });
 
-test("losses follow the event's shape: the properties' size first, then the context's", () => {
+test("losses follow the event's shape: the context's first, then the whole event's size last", () => {
   const answer = open().track(
     createTrackedEvent({
       properties: {
@@ -198,8 +198,8 @@ test("losses follow the event's shape: the properties' size first, then the cont
     status: "dropped",
     reason: "provider-filtered",
     losses: [
-      { path: "properties", reason: "invalid" },
       { path: "context.plan", reason: "omitted" },
+      { path: "properties", reason: "invalid" },
     ],
   });
 });

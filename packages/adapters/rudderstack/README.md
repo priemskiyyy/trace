@@ -76,7 +76,7 @@ RudderStack's SDK leaves out every object member whose value is `null` when it s
 
 RudderStack adds its own context to each event, including the user's traits, which the adapter does not count, so the size measure is a lower bound, and an event just under the limit can still be refused. What RudderStack's data plane does past a limit is not verified here.
 
-Losses follow the event's shape: the properties first, then the context.
+Losses follow the event's shape: the properties first, then the context, then the whole event's size last.
 
 [http-api]: https://www.rudderstack.com/docs/api/http-api/
 

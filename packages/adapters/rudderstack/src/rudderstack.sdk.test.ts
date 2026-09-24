@@ -7,7 +7,7 @@ import { expect, test, vi } from "vitest";
 import { rudderstack } from "src/rudderstack";
 import { createTrackedEvent } from "src/trackedEvent.fixture";
 
-type Request = { path: string; body: Record<string, unknown> };
+type Request = { path: string; body: unknown };
 
 type Waiter = { matches: (request: Request) => boolean; resolve: () => void };
 
@@ -51,7 +51,9 @@ class RecordingXhr {
   setRequestHeader = () => {};
 
   send = (body: string) => {
-    record({ path: new URL(this.#url).pathname, body: JSON.parse(body) });
+    const parsed: unknown = JSON.parse(body);
+
+    record({ path: new URL(this.#url).pathname, body: parsed });
     this.status = 200;
     this.responseText = "OK";
     queueMicrotask(() => {
@@ -73,8 +75,13 @@ const reached = (matches: (request: Request) => boolean) =>
     waiters.push({ matches, resolve });
   });
 
+const getEventName = (body: unknown) =>
+  typeof body === "object" && body !== null && "event" in body
+    ? body.event
+    : undefined;
+
 const isTrack = (name: string) => (request: Request) =>
-  request.path === "/v1/track" && request.body["event"] === name;
+  request.path === "/v1/track" && getEventName(request.body) === name;
 
 const getTrack = (name: string) => requests.find(isTrack(name))?.body ?? null;
 
@@ -156,14 +163,27 @@ test("the real SDK sends the properties over the context without reserved names 
       { path: "context.value", reason: "omitted" },
     ],
   });
-  expect(sent?.["properties"]).toStrictEqual({
+
+  if (
+    typeof sent !== "object" ||
+    sent === null ||
+    !("properties" in sent) ||
+    !("originalTimestamp" in sent) ||
+    !("messageId" in sent)
+  ) {
+    throw new Error(
+      "RudderStack did not send a track call for Checkout Started.",
+    );
+  }
+
+  expect(sent.properties).toStrictEqual({
     cart: { id: "cart_1" },
     value: 1,
     locale: "de",
   });
-  expect(sent?.["originalTimestamp"]).toBe(ISO_TIMESTAMP);
-  expect(sent?.["messageId"]).toEqual(expect.any(String));
-  expect(sent?.["messageId"]).not.toBe(createTrackedEvent().id);
+  expect(sent.originalTimestamp).toBe(ISO_TIMESTAMP);
+  expect(sent.messageId).toEqual(expect.any(String));
+  expect(sent.messageId).not.toBe(createTrackedEvent().id);
 });
 
 test("identify keeps the traits the real SDK holds, and a removal never reaches the wire", async () => {
@@ -190,11 +210,17 @@ test("identify keeps the traits the real SDK holds, and a removal never reaches 
   await reached(isTrack("Ada Checked Out"));
 
   const identified = requests.flatMap(({ path, body }) => {
-    if (path !== "/v1/identify" || body["userId"] !== "ada") {
+    if (
+      path !== "/v1/identify" ||
+      typeof body !== "object" ||
+      body === null ||
+      !("userId" in body) ||
+      body.userId !== "ada"
+    ) {
       return [];
     }
 
-    return [body["context"]];
+    return ["context" in body ? body.context : undefined];
   });
 
   expect(refused).toStrictEqual(
@@ -264,16 +290,26 @@ test("a new group's call carries only its own traits, though the real SDK would 
   });
 
   await reached(
-    ({ path, body }) => path === "/v1/group" && body["groupId"] === "w_2",
+    (request) =>
+      request.path === "/v1/group" &&
+      typeof request.body === "object" &&
+      request.body !== null &&
+      "groupId" in request.body &&
+      request.body.groupId === "w_2",
   );
 
   expect(
     requests.flatMap(({ path, body }) => {
-      if (path !== "/v1/group") {
+      if (path !== "/v1/group" || typeof body !== "object" || body === null) {
         return [];
       }
 
-      return [{ groupId: body["groupId"], traits: body["traits"] }];
+      return [
+        {
+          groupId: "groupId" in body ? body.groupId : undefined,
+          traits: "traits" in body ? body.traits : undefined,
+        },
+      ];
     }),
   ).toStrictEqual([
     { groupId: "w_1", traits: { tier: "enterprise" } },
@@ -307,7 +343,18 @@ test("through a Trace, a user switch resets the real SDK and its anonymous id be
     anonymousId: expect.any(String),
     context: { traits: {} },
   });
-  expect(eve?.["anonymousId"]).not.toBe(dee?.["anonymousId"]);
+
+  const deeAnonymousId =
+    typeof dee === "object" && dee !== null && "anonymousId" in dee
+      ? dee.anonymousId
+      : undefined;
+
+  const eveAnonymousId =
+    typeof eve === "object" && eve !== null && "anonymousId" in eve
+      ? eve.anonymousId
+      : undefined;
+
+  expect(eveAnonymousId).not.toBe(deeAnonymousId);
   trace.dispose();
 });
 

@@ -7,7 +7,7 @@ import { expect, test, vi } from "vitest";
 import { segment } from "src/segment";
 import { createTrackedEvent } from "src/trackedEvent.fixture";
 
-type Request = { path: string; body: Record<string, unknown> };
+type Request = { path: string; body: unknown };
 
 type Waiter = { matches: (request: Request) => boolean; resolve: () => void };
 
@@ -24,14 +24,17 @@ const context = {
   now: () => TIMESTAMP,
 };
 
+const getMessageId = (body: unknown) =>
+  typeof body === "object" && body !== null && "messageId" in body
+    ? body.messageId
+    : undefined;
+
 // analytics-next 1.84.3 in jsdom: cdnSettings skip the CDN, and every request lands here.
 vi.stubGlobal(
   "fetch",
   vi.fn(async (url: string, init: RequestInit) => {
-    const request = {
-      path: new URL(url).pathname,
-      body: JSON.parse(String(init.body)),
-    };
+    const body: unknown = JSON.parse(String(init.body));
+    const request = { path: new URL(url).pathname, body };
 
     requests.push(request);
 
@@ -40,7 +43,7 @@ vi.stubGlobal(
       waiter.resolve();
     }
 
-    if (failing.delete(request.body["messageId"])) {
+    if (failing.delete(getMessageId(body))) {
       return new Response("{}", { status: 500 });
     }
 
@@ -80,21 +83,26 @@ const reached = (matches: (request: Request) => boolean) =>
   });
 
 const isEvent = (messageId: string) => (request: Request) =>
-  request.path === "/v1/t" && request.body["messageId"] === messageId;
+  request.path === "/v1/t" && getMessageId(request.body) === messageId;
 
 const getSent = (messageId: string) =>
   requests.find(isEvent(messageId))?.body ?? null;
 
 const getAttempts = (messageId: string) =>
   requests.flatMap((request) => {
-    if (!isEvent(messageId)(request)) {
+    if (
+      !isEvent(messageId)(request) ||
+      typeof request.body !== "object" ||
+      request.body === null
+    ) {
       return [];
     }
 
     return [
       {
-        userId: request.body["userId"],
-        anonymousId: request.body["anonymousId"],
+        userId: "userId" in request.body ? request.body.userId : undefined,
+        anonymousId:
+          "anonymousId" in request.body ? request.body.anonymousId : undefined,
       },
     ];
   });
@@ -176,15 +184,32 @@ test("identify, traits with a removal and a group reach the real SDK as Segment'
   });
 
   await reached(
-    ({ path, body }) => path === "/v1/g" && body["groupId"] === "w_1",
+    (request) =>
+      request.path === "/v1/g" &&
+      typeof request.body === "object" &&
+      request.body !== null &&
+      "groupId" in request.body &&
+      request.body.groupId === "w_1",
   );
 
   const sent = requests.flatMap(({ path, body }) => {
-    if (body["userId"] !== "ada" || path === "/v1/t") {
+    if (typeof body !== "object" || body === null) {
       return [];
     }
 
-    return [{ path, traits: body["traits"], groupId: body["groupId"] }];
+    const userId = "userId" in body ? body.userId : undefined;
+
+    if (userId !== "ada" || path === "/v1/t") {
+      return [];
+    }
+
+    return [
+      {
+        path,
+        traits: "traits" in body ? body.traits : undefined,
+        groupId: "groupId" in body ? body.groupId : undefined,
+      },
+    ];
   });
 
   expect(sent).toStrictEqual([
@@ -222,7 +247,18 @@ test("through a Trace, a user switch resets the real SDK before the next user, s
 
   expect(dee).toMatchObject({ userId: "dee", anonymousId: expect.any(String) });
   expect(eve).toMatchObject({ userId: "eve", anonymousId: expect.any(String) });
-  expect(eve?.["anonymousId"]).not.toBe(dee?.["anonymousId"]);
+
+  const deeAnonymousId =
+    typeof dee === "object" && dee !== null && "anonymousId" in dee
+      ? dee.anonymousId
+      : undefined;
+
+  const eveAnonymousId =
+    typeof eve === "object" && eve !== null && "anonymousId" in eve
+      ? eve.anonymousId
+      : undefined;
+
+  expect(eveAnonymousId).not.toBe(deeAnonymousId);
   trace.dispose();
 });
 

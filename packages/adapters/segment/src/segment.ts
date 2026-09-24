@@ -52,7 +52,7 @@ export const segment = <TSdk extends SegmentLike>({
           return {
             status: "dropped",
             reason: "provider-filtered",
-            losses: [{ path: "properties", reason: "invalid" }, ...losses],
+            losses: [...losses, { path: "properties", reason: "invalid" }],
           };
         }
 

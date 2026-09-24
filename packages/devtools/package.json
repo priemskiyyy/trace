@@ -1,0 +1,116 @@
+{
+  "name": "@priemskiyyy/trace-devtools",
+  "version": "0.1.0",
+  "description": "Devtools for Trace: a framework-independent inspector for destinations, identity, consent and a timeline of events and diagnostics, with values hidden until asked and React, Vue, Solid and Svelte wrappers.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priemskiyyy/trace.git",
+    "directory": "packages/devtools"
+  },
+  "bugs": {
+    "url": "https://github.com/priemskiyyy/trace/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js",
+      "default": "./dist/react.js"
+    },
+    "./vue": {
+      "types": "./dist/vue.d.ts",
+      "import": "./dist/vue.js",
+      "default": "./dist/vue.js"
+    },
+    "./solid": {
+      "types": "./dist/solid.d.ts",
+      "import": "./dist/solid.js",
+      "default": "./dist/solid.js"
+    },
+    "./svelte": {
+      "types": "./dist/svelte.d.ts",
+      "import": "./dist/svelte.js",
+      "default": "./dist/svelte.js"
+    }
+  },
+  "scripts": {
+    "build": "vite build && tsdown",
+    "lint:typescript": "tsc --noEmit -p .",
+    "lint:eslint": "eslint src",
+    "test:unit": "vitest run --root ../.. --project devtools --project devtools-ssr"
+  },
+  "peerDependencies": {
+    "@priemskiyyy/trace": ">=0.1.0 <0.2",
+    "@priemskiyyy/trace-react": ">=0.1.0 <0.2",
+    "@priemskiyyy/trace-solid": ">=0.1.0 <0.2",
+    "@priemskiyyy/trace-svelte": ">=0.1.0 <0.2",
+    "@priemskiyyy/trace-vue": ">=0.1.0 <0.2",
+    "react": ">=19.2.0 <20",
+    "solid-js": ">=1.9.0 <2",
+    "svelte": ">=5.29.0 <6",
+    "vue": ">=3.5.0 <4"
+  },
+  "peerDependenciesMeta": {
+    "@priemskiyyy/trace-react": {
+      "optional": true
+    },
+    "@priemskiyyy/trace-solid": {
+      "optional": true
+    },
+    "@priemskiyyy/trace-svelte": {
+      "optional": true
+    },
+    "@priemskiyyy/trace-vue": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@priemskiyyy/trace": "workspace:*",
+    "@priemskiyyy/trace-react": "workspace:*",
+    "@priemskiyyy/trace-solid": "workspace:*",
+    "@priemskiyyy/trace-svelte": "workspace:*",
+    "@priemskiyyy/trace-vue": "workspace:*"
+  },
+  "keywords": [
+    "devtools",
+    "inspector",
+    "diagnostics",
+    "product-analytics",
+    "react",
+    "vue",
+    "solid",
+    "svelte",
+    "typescript",
+    "trace"
+  ],
+  "homepage": "https://priemskiyyy.github.io/trace/"
+}

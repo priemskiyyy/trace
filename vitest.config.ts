@@ -153,6 +153,53 @@ const bindingProjects = Object.entries(bindings).flatMap(([name, projects]) => {
   return projects;
 });
 
+const devtoolsAlias = {
+  src: fileURLToPath(new URL("./packages/devtools/src", import.meta.url)),
+  // The wrappers import the inspector by its package name, which resolves to the source here.
+  "@priemskiyyy/trace-devtools": fileURLToPath(
+    new URL("./packages/devtools/src/index.ts", import.meta.url),
+  ),
+};
+
+const devtoolsProject: TestProjectConfiguration = {
+  extends: true,
+  // The inspector is compiled as its bundle is, and its wrappers are tested through every binding, Svelte's included.
+  plugins: [
+    solid({ solid: { delegateEvents: false } }),
+    svelte({ configFile: false }),
+  ],
+  resolve: {
+    alias: devtoolsAlias,
+    conditions: ["development", "browser"],
+    dedupe: ["react", "react-dom", "vue"],
+  },
+  test: {
+    name: "devtools",
+    include: ["packages/devtools/src/**/*.test.{ts,tsx}"],
+    exclude: ["**/*.server.test.{ts,tsx}"],
+    environment: "jsdom",
+    server: { deps: { inline: [/solid-js/, /@solidjs\/testing-library/] } },
+  },
+};
+
+const devtoolsSsrProject: TestProjectConfiguration = {
+  extends: true,
+  // Every wrapper renders on a real server, with no window and each framework's server build.
+  plugins: [
+    solid({ ssr: true, solid: { delegateEvents: false } }),
+    svelte({ configFile: false }),
+  ],
+  resolve: {
+    alias: devtoolsAlias,
+    dedupe: ["react", "react-dom", "vue", "solid-js"],
+  },
+  test: {
+    name: "devtools-ssr",
+    include: ["packages/devtools/src/**/*.server.test.{ts,tsx}"],
+    environment: "node",
+  },
+};
+
 export default defineConfig({
   test: {
     globals: false,
@@ -166,6 +213,8 @@ export default defineConfig({
         },
       },
       ...bindingProjects,
+      devtoolsProject,
+      devtoolsSsrProject,
       ...adapterProjects,
     ],
   },

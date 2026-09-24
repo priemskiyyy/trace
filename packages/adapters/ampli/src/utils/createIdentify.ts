@@ -48,7 +48,9 @@ export const createIdentify = <TIdentify extends AmplitudeIdentifyLike>(
     const kept: [string, unknown][] = [];
     const stripped: string[] = [];
 
-    for (const [key, nested] of Object.entries(value)) {
+    for (const entry of Object.entries(value)) {
+      const [key, nested]: [string, unknown] = entry;
+
       const mapped = getValue(
         nested,
         `${path}.${key}`,

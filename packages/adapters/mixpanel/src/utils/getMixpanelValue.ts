@@ -23,7 +23,7 @@ export const getMixpanelValue = (
   const losses: MappingLoss[] = [];
 
   if (Array.isArray(value)) {
-    const items = value.flatMap((item, index) => {
+    const items = value.flatMap((item: unknown, index) => {
       const itemPath = `${path}.${index}`;
 
       if (index >= MAX_LIST_ITEMS) {
@@ -51,7 +51,7 @@ export const getMixpanelValue = (
   }
 
   const entries = Object.entries(value).flatMap(
-    ([key, child], index): [string, unknown][] => {
+    ([key, child]: [string, unknown], index): [string, unknown][] => {
       const childPath = `${path}.${key}`;
 
       if (index >= MAX_OBJECT_KEYS) {

@@ -1,0 +1,60 @@
+{
+  "name": "@priemskiyyy/trace-mixpanel-react-native",
+  "version": "0.1.0",
+  "description": "Mixpanel destination for Trace on React Native: each event is one track call with its time and insert id, over the mixpanel-react-native instance you inject.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priemskiyyy/trace.git",
+    "directory": "packages/adapters/mixpanel-react-native"
+  },
+  "bugs": {
+    "url": "https://github.com/priemskiyyy/trace/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint:typescript": "tsc --noEmit -p .",
+    "lint:eslint": "eslint src",
+    "test:unit": "vitest run --root ../../.. --project mixpanel-react-native"
+  },
+  "peerDependencies": {
+    "@priemskiyyy/trace": ">=0.1.0 <0.2",
+    "mixpanel-react-native": ">=3.8.0 <4"
+  },
+  "peerDependenciesMeta": {
+    "mixpanel-react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@priemskiyyy/trace": "workspace:*"
+  },
+  "keywords": [
+    "mixpanel",
+    "product-analytics",
+    "react-native",
+    "typescript",
+    "trace",
+    "adapter"
+  ],
+  "homepage": "https://priemskiyyy.github.io/trace/"
+}

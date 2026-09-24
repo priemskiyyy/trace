@@ -494,15 +494,26 @@ const readUploads = () => {
   }[] = [];
 
   const fetch = async (_url: string, init: RequestInit) => {
-    const { events }: { events: Record<string, unknown>[] } = JSON.parse(
-      String(init.body),
-    );
+    const parsed: unknown = JSON.parse(String(init.body));
 
-    for (const event of events) {
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("events" in parsed) ||
+      !Array.isArray(parsed.events)
+    ) {
+      throw new Error("Amplitude sent a payload without events.");
+    }
+
+    for (const event of parsed.events) {
+      if (typeof event !== "object" || event === null) {
+        continue;
+      }
+
       uploaded.push({
-        event_type: event["event_type"],
-        user_id: event["user_id"],
-        device_id: event["device_id"],
+        event_type: "event_type" in event ? event.event_type : undefined,
+        user_id: "user_id" in event ? event.user_id : undefined,
+        device_id: "device_id" in event ? event.device_id : undefined,
       });
     }
 
@@ -588,15 +599,22 @@ test("an anonymous call Amplitude still holds when remove() takes the plugin out
 });
 
 test("the pin rides in each call's extra, which Amplitude hands to its plugins and strips before upload", async () => {
-  const uploaded: Record<string, unknown>[] = [];
+  const uploaded: unknown[] = [];
 
   const { wrapper, plugin, captured, capturedAt } = await load(
     async (_url, init) => {
-      const { events }: { events: Record<string, unknown>[] } = JSON.parse(
-        String(init.body),
-      );
+      const parsed: unknown = JSON.parse(String(init.body));
 
-      uploaded.push(...events);
+      if (
+        typeof parsed !== "object" ||
+        parsed === null ||
+        !("events" in parsed) ||
+        !Array.isArray(parsed.events)
+      ) {
+        throw new Error("Amplitude sent a payload without events.");
+      }
+
+      uploaded.push(...parsed.events);
 
       return answer(200);
     },
@@ -633,12 +651,23 @@ test("the pin rides in each call's extra, which Amplitude hands to its plugins a
     },
   ]);
   expect(
-    uploaded.map((event) => ({
-      event_type: event["event_type"],
-      user_id: event["user_id"],
-      device_id: event["device_id"],
-      hasExtra: Object.hasOwn(event, "extra"),
-    })),
+    uploaded.map((event) => {
+      if (typeof event !== "object" || event === null) {
+        return {
+          event_type: undefined,
+          user_id: undefined,
+          device_id: undefined,
+          hasExtra: false,
+        };
+      }
+
+      return {
+        event_type: "event_type" in event ? event.event_type : undefined,
+        user_id: "user_id" in event ? event.user_id : undefined,
+        device_id: "device_id" in event ? event.device_id : undefined,
+        hasExtra: Object.hasOwn(event, "extra"),
+      };
+    }),
   ).toStrictEqual([
     {
       event_type: "Event No Properties",

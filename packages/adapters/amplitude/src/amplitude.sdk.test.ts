@@ -76,12 +76,14 @@ const createAmplitude = async ({
   isPluginAdded?: boolean;
 } = {}) => {
   const uploaded: Types.Event[] = [];
-  const requests: { events: Record<string, unknown>[] }[] = [];
+  const requests: unknown[] = [];
 
   vi.stubGlobal(
     "fetch",
     vi.fn(async (_url: string, init?: RequestInit) => {
-      requests.push(JSON.parse(String(init?.body)));
+      const parsed: unknown = JSON.parse(String(init?.body));
+
+      requests.push(parsed);
 
       return new Response(
         JSON.stringify({
@@ -346,13 +348,35 @@ test("the real SDK uploads each call Trace makes under the user and device it wa
   expect(await session.flush?.(flush)).toStrictEqual({ status: "flushed" });
   expect(
     requests
-      .flatMap(({ events }) => events)
-      .map((sent) => ({
-        event_type: sent.event_type,
-        user_id: sent.user_id,
-        device_id: sent.device_id,
-        hasExtra: "extra" in sent,
-      })),
+      .flatMap((request) => {
+        if (
+          typeof request !== "object" ||
+          request === null ||
+          !("events" in request) ||
+          !Array.isArray(request.events)
+        ) {
+          return [];
+        }
+
+        return request.events;
+      })
+      .map((sent) => {
+        if (typeof sent !== "object" || sent === null) {
+          return {
+            event_type: undefined,
+            user_id: undefined,
+            device_id: undefined,
+            hasExtra: false,
+          };
+        }
+
+        return {
+          event_type: "event_type" in sent ? sent.event_type : undefined,
+          user_id: "user_id" in sent ? sent.user_id : undefined,
+          device_id: "device_id" in sent ? sent.device_id : undefined,
+          hasExtra: "extra" in sent,
+        };
+      }),
   ).toStrictEqual([
     {
       event_type: "Checkout Started",

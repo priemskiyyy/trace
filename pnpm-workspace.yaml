@@ -1,0 +1,17 @@
+packages:
+  - packages/*
+  - packages/adapters/*
+  - examples/*
+
+allowBuilds:
+  # The provider SDKs are here for their types and tests only. None of their
+  # install scripts, binaries or generated code is ever run.
+  "@firebase/util": false
+  core-js: false
+  esbuild: true
+  protobufjs: false
+
+minimumReleaseAgeExclude:
+  - "@posthog/core@1.55.2"
+  - posthog-node@5.52.6
+  - posthog-react-native@4.77.0

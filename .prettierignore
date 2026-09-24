@@ -1,0 +1,16 @@
+pnpm-lock.yaml
+dist
+node_modules
+coverage
+.idea
+.artifacts
+.superpowers
+.svelte-kit
+tasks
+docs/.vitepress/dist
+docs/.vitepress/cache
+test-results
+playwright-report
+
+# A real generated Ampli wrapper, kept byte for byte as a fixture.
+packages/adapters/ampli/src/ampli-v2-generated.ts

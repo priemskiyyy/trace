@@ -1,0 +1,61 @@
+{
+  "name": "@priemskiyyy/trace-amplitude-node",
+  "version": "0.1.0",
+  "description": "Amplitude destination for Trace on the server: each event is one track call for its user and the visitor's device, with its time and insert id, over the Amplitude Node SDK you inject.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priemskiyyy/trace.git",
+    "directory": "packages/adapters/amplitude-node"
+  },
+  "bugs": {
+    "url": "https://github.com/priemskiyyy/trace/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint:typescript": "tsc --noEmit -p .",
+    "lint:eslint": "eslint src",
+    "test:unit": "vitest run --root ../../.. --project amplitude-node"
+  },
+  "peerDependencies": {
+    "@priemskiyyy/trace": ">=0.1.0 <0.2",
+    "@amplitude/analytics-node": ">=1.5.0 <2"
+  },
+  "peerDependenciesMeta": {
+    "@amplitude/analytics-node": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@priemskiyyy/trace": "workspace:*"
+  },
+  "keywords": [
+    "amplitude",
+    "product-analytics",
+    "node",
+    "server",
+    "typescript",
+    "trace",
+    "adapter"
+  ],
+  "homepage": "https://priemskiyyy.github.io/trace/"
+}

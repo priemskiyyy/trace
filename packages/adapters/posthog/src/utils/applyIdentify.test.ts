@@ -24,11 +24,16 @@ test("a user is PostHog's identify", () => {
 });
 
 test.each([
+  "anonymous",
+  "guest",
   "distinct_id",
   "distinctid",
+  "id",
+  "not_authenticated",
+  "email",
   "undefined",
-  "null",
-  "NULL",
+  "true",
+  "false",
   "Undefined",
   "$posthog_cookieless",
 ])(
@@ -43,6 +48,47 @@ test.each([
       }),
     );
     expect(fake.calls.identify).toStrictEqual([]);
+  },
+);
+
+test.each(["[object Object]", "NaN", "None", "none", "null", "0"])(
+  "an id PostHog refuses in this exact spelling, %s, is reported unsupported and never sent",
+  (id) => {
+    const fake = fakePostHog();
+
+    expect(getThrown(() => applyIdentify(fake.sdk, { id }))).toStrictEqual(
+      new TraceError({
+        code: "UNSUPPORTED",
+        message: `posthog-js refuses to identify "${id}", so the person stays anonymous there.`,
+      }),
+    );
+    expect(fake.calls.identify).toStrictEqual([]);
+  },
+);
+
+test.each([" ", "   ", "\t", " \n "])(
+  "an id of only white space, %j, is reported unsupported and never sent",
+  (id) => {
+    const fake = fakePostHog();
+
+    expect(getThrown(() => applyIdentify(fake.sdk, { id }))).toStrictEqual(
+      new TraceError({
+        code: "UNSUPPORTED",
+        message: `posthog-js refuses to identify "${id}", so the person stays anonymous there.`,
+      }),
+    );
+    expect(fake.calls.identify).toStrictEqual([]);
+  },
+);
+
+test.each(["NULL", "Null", "nan", "NONE", "00", "guest_42", "anonymous-7"])(
+  "%s only resembles a refused id, so it is identified",
+  (id) => {
+    const fake = fakePostHog();
+
+    applyIdentify(fake.sdk, { id });
+
+    expect(fake.calls.identify).toStrictEqual([id]);
   },
 );
 

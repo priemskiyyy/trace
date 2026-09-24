@@ -4,7 +4,11 @@ import type { AnalyticsAdapter } from "@priemskiyyy/trace";
 import type { PostHogAdapterOptions } from "src/types/PostHogAdapterOptions";
 import type { PostHogLike } from "src/types/PostHogLike";
 import { IDENTITY_EVENTS } from "src/utils/constants/events";
-import { MAX_DISTINCT_ID_LENGTH } from "src/utils/constants/identity";
+import {
+  MAX_DISTINCT_ID_LENGTH,
+  REFUSED_DISTINCT_IDS,
+  REFUSED_EXACT_DISTINCT_IDS,
+} from "src/utils/constants/identity";
 import { getDistinctId } from "src/utils/getDistinctId";
 import { getPostHogProperties } from "src/utils/getPostHogProperties";
 
@@ -64,6 +68,16 @@ export const posthog = <TSdk extends PostHogLike>({
       return { status: "submitted", evidence: "sdk-call-returned", losses };
     },
     identify: ({ user }) => {
+      if (
+        REFUSED_DISTINCT_IDS.includes(user.id.toLowerCase()) ||
+        REFUSED_EXACT_DISTINCT_IDS.includes(user.id)
+      ) {
+        throw new TraceError({
+          code: "DELIVERY_FAILED",
+          message: `PostHog accepts "${user.id}" as an ordinary distinct id, so every user who sends this placeholder would share one person there.`,
+        });
+      }
+
       if (user.id.length > MAX_DISTINCT_ID_LENGTH) {
         throw new TraceError({
           code: "DELIVERY_FAILED",

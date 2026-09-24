@@ -1,9 +1,25 @@
-/** posthog-js refuses to identify these ids, compared in lowercase, and logs an error instead. */
+/** PostHog refuses to identify a person by these ids, compared in lowercase, as placeholders that would join unrelated users. */
 export const REFUSED_DISTINCT_IDS = Object.freeze([
-  "distinct_id",
+  "anonymous",
+  "guest",
   "distinctid",
+  "distinct_id",
+  "id",
+  "not_authenticated",
+  "email",
   "undefined",
+  "true",
+  "false",
+]);
+
+/** PostHog refuses to identify a person by these ids in this exact spelling. */
+export const REFUSED_EXACT_DISTINCT_IDS = Object.freeze([
+  "[object Object]",
+  "NaN",
+  "None",
+  "none",
   "null",
+  "0",
 ]);
 
 /** The distinct id posthog-js keeps for a cookieless person, which it refuses to identify in this exact spelling. */

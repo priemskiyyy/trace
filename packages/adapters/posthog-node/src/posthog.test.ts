@@ -325,6 +325,42 @@ test("a user id of 200 characters is identified, and one of 201, which PostHog w
   ]);
 });
 
+test.each(["guest", "Guest", "anonymous", "distinct_id", "null", "0", "NaN"])(
+  "a placeholder distinct id, %s, fails identify with DELIVERY_FAILED and sends nothing, since every user who sends it would share one person",
+  (id) => {
+    const fake = fakePostHog();
+
+    expect(
+      getThrown(() =>
+        open(fake, { anonymousId: VISITOR }).identify?.({ user: { id } }),
+      ),
+    ).toStrictEqual(
+      expect.objectContaining({
+        name: "TraceError",
+        code: "DELIVERY_FAILED",
+        message: `PostHog accepts "${id}" as an ordinary distinct id, so every user who sends this placeholder would share one person there.`,
+      }),
+    );
+    expect(fake.calls).toStrictEqual([]);
+  },
+);
+
+test.each(["Guest_42", "not-a-placeholder", "NULL0"])(
+  "%s only resembles a placeholder id, so it is identified",
+  (id) => {
+    const fake = fakePostHog();
+
+    open(fake, { anonymousId: VISITOR }).identify?.({ user: { id } });
+
+    expect(fake.calls).toStrictEqual([
+      [
+        "identify",
+        { distinctId: id, properties: { $anon_distinct_id: VISITOR } },
+      ],
+    ]);
+  },
+);
+
 test("traits unset the removed names and then set the values on the user's person, each call empty or not, since posthog-node sends nothing for an empty one", () => {
   const fake = fakePostHog();
   const session = open(fake, { anonymousId: VISITOR });

@@ -35,7 +35,7 @@ trace.consent.set({ analytics: "granted", advertising: "denied" });
 trace.start();
 ```
 
-The `consent` option names the purposes each destination needs. Here PostHog needs `analytics`, Mixpanel needs `analytics` and `advertising`, and the backend, which the option does not name, is never gated. With these decisions PostHog receives events and Mixpanel does not.
+The `consent` option names the purposes each destination needs. Here PostHog needs `analytics`, Mixpanel needs `analytics` and `advertising`, and the backend, which the option does not name, is never gated. With these decisions PostHog receives events and Mixpanel does not. Each entry must be the destination's own list of purpose strings: one that is not, or one that names a destination you never configured, throws `TraceError` `INVALID_CONFIGURATION` from the constructor.
 
 ## Decisions
 
@@ -56,7 +56,7 @@ The framework bindings read the decisions for you, such as `useConsent()` in [Re
 
 ## What a gate does
 
-A destination is open while every purpose it needs is `granted`, and closed otherwise. Gating fails closed: `unknown` and `denied` close it, and so does a list of purposes that cannot be read.
+A destination is open while every purpose it needs is `granted`, and closed otherwise. Gating fails closed: `unknown` and `denied` close it.
 
 | While a destination is closed              | Trace                                                                                                                    |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
@@ -74,7 +74,7 @@ An SDK can collect on its own before Trace starts and outside Trace's calls: pag
 
 - A gated destination that opens while its consent is closed gets `collection(false)` at once. One that opens while its consent is open gets `collection(true)` at once, because its SDK was initialized opted out.
 - Closing a destination calls `collection(false)`, and opening it calls `collection(true)` before it plans the provider's identity again.
-- A switch that answers a promise is awaited, bounded by `timeout`, before the destination plans or hands anything more to its provider. A switch that throws, rejects or outlasts `timeout` is recorded as the diagnostic `destination collection failed`, and the destination goes on.
+- A switch that answers a promise is awaited, bounded by `timeout`, before the destination plans or hands anything more to its provider. A switch that throws or rejects is recorded as the diagnostic `destination collection failed`, whenever it rejects, and the destination goes on. One that outlasts `timeout` releases the destination without a diagnostic, because the switch may still land, as a slow storage load makes PostHog's `optIn()` on React Native do.
 - A destination the `consent` option does not name never receives `collection`, so an SDK you gate yourself stays yours to switch.
 
 | Adapter                  | Its switch                                                                                   | Initialize it opted out with                                                                                                            |

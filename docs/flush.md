@@ -49,9 +49,9 @@ result.drained; // false when a destination ran out of time or was not ready
 result.destinations.research; // { status: "unsupported" }
 ```
 
-1. Each ready destination first hands off what it held from before the call.
+1. Each ready destination first hands off what it held from before the call, and finishes an identity update pending at the call, such as a sign-in or a trait change made just before a serverless handler flushes and exits.
 2. Then it calls its provider's flush, with the time left and a signal, so an SDK that batches sends at once.
-3. It waits for those hand-offs and for the provider's answer, bounded by the timeout.
+3. It waits for those hand-offs, that identity update and the provider's answer, bounded by the timeout.
 
 The timeout, two seconds by default, bounds the wait and nothing else. It cancels nothing, and it proves nothing about delivery. Events tracked after the call do not extend the wait, and a provider's own flush gets what is left of the timeout, not all of it again. `flush` never rejects: a timeout outside 0 to 2147483647 ms is brought into that range. Unlike Trace's other timers, a pending flush keeps a Node process alive, because its caller is waiting for it.
 

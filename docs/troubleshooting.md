@@ -45,6 +45,8 @@ The error is a `TraceError` whose `code` says what to fix: `NOT_INITIALIZED` mea
 
 **The outcome is `skipped` with `identity-failed`.** An identity step this event needed failed outright, such as Heap refusing a placeholder id or PostHog refusing one it would have to cut, so sending the event risked filing it under the wrong person. That user's events stay skipped until the next successful identity step.
 
+**Every event for one destination is skipped as `identity-failed` at once, after one long wait.** Its SDK never answers, as when a content blocker kept it from loading. An identity step and its retry both outlasted `timeout`, so Trace stopped calling that provider rather than wait `timeout` again for each event, and skips every event that needs an identity step until one of those calls answers, however late. The diagnostic `identity step failed` with the reason `timeout` marks the two calls. Let the SDK load, and the next event or sign-in after its answer plans and delivers again.
+
 **The outcome is `skipped` with `auth-subject-mismatch`.** The adapter had to wait for something account-dependent, and the user changed before it could send.
 
 **The outcome is `skipped` with `unidentified`.** A server adapter had neither a signed-in user nor an `anonymousId` to send the event under. See [servers and serverless](servers.md).
@@ -78,7 +80,7 @@ Misconfiguration is the one thing Trace throws for, so you find it at startup:
 Trace has no destination named "reserach".
 ```
 
-Every such error is a `TraceError` with the code `INVALID_CONFIGURATION`, and its message names what is wrong: `events` that is not a plain object, `destinations` that is not an object of adapters, `consent` or `defaults.to` naming a destination you never configured, a `redact` that is not a function, a count or duration outside its bounds, or a `schema` that is present and not an object. See [what the constructor refuses](configuration.md#what-the-constructor-refuses). The bindings throw the same error when a hook is used outside its provider, and the devtools do when `mount()` is called twice.
+Every such error is a `TraceError` with the code `INVALID_CONFIGURATION`, and its message names what is wrong: `events` that is not a plain object, `destinations` that is not an object of adapters, `consent` or `defaults.to` naming a destination you never configured, a `consent` entry that is not a list of purpose strings, a `redact` that is not a function, a count or duration outside its bounds, or a `schema` that is present and not an object. See [what the constructor refuses](configuration.md#what-the-constructor-refuses). The bindings throw the same error when a hook is used outside its provider, and the devtools do when `mount()` is called twice.
 
 ## Status says `ready`, but nothing arrives
 

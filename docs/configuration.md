@@ -64,7 +64,7 @@ A Trace that cannot work throws a `TraceError` with the code `INVALID_CONFIGURAT
 
 - `events` that is not a plain object, or that declares an event under the empty name.
 - `destinations` that is not an object or is a list, or a destination that is not an adapter: an object with a `name` string and an `open` function.
-- `consent` that is not an object, or that names a destination you never configured.
+- `consent` that is not an object, that names a destination you never configured, or whose entry for a destination is not that destination's own list of purpose strings.
 - `defaults.to` that is neither a list nor a function, or a list that names a destination you never configured.
 - A `redact` that is not a function.
 - A count that is not a whole number of 0 or more: `buffer.capacity` and every entry of `privacy.limits`.

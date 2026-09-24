@@ -61,7 +61,7 @@ When a provider cannot do something, the adapter does not imitate it. It records
 ## Rules that explain most behavior
 
 - **Privacy outranks delivery.** A `redact` that throws costs the event. A `defaults.to` function that throws costs the event too, rather than sending it anywhere else.
-- **Consent fails closed.** `unknown` and `denied` close a destination, and so does a list of purposes that cannot be read.
+- **Consent fails closed.** `unknown` and `denied` close a destination, and a `consent` entry that is not a list of purpose strings throws at construction rather than leave it open.
 - **An event keeps what it was accepted with.** Its identity, context and time are fixed when `track` returns. When the user switches or signs out, what the previous user left waiting is dropped instead of sent under the next one.
 - **Delivery outranks metadata.** A trait that fails its schema costs only itself, never the user, the other traits or an event.
 - **Trace never takes the application down.** Tracking, the identity calls, consent, `start`, `flush` and `dispose` never throw. Only programming mistakes throw, so that you find them at once: a constructor given options that cannot work, `destination()` for a name you never configured, a binding hook outside its provider, `fromAmpli` with a key that differs from the generated class's name, and mounting the devtools twice.

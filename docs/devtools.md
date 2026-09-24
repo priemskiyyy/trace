@@ -61,7 +61,7 @@ The class also has `unmount()`, `setTrace(trace)` and `setMaxEvents(count)`. Mou
 - **Timeline**: every accepted event and every diagnostic, newest first, searchable by type, destination, event id and summary, and filterable by kind. Pause stops recording, Clear empties it; neither touches the Trace.
 - **An event's detail**: each destination it was routed to, its outcome as it lands, the losses that outcome reported, its identity and context, and its properties, traits and groups.
 
-The launcher's red dot and the Errors chip count the failures (every `* failed` phrase), `buffer overflow`, and a refused user, trait or group. A dropped, skipped or indeterminate event, and an identity step a provider could not take, show under their own kind instead, because consent drops and documented unsupported steps are expected.
+The launcher's red dot and the Errors chip count the failures (every `* failed` phrase), `buffer overflow`, and a refused user, trait, group or context. A dropped, skipped or indeterminate event, and an identity step a provider could not take, show under their own kind instead, because consent drops and documented unsupported steps are expected.
 
 ## It only reads
 

@@ -124,6 +124,24 @@ const refusals: [string, RefusedOptions, string][] = [
     'consent names "warehouse", which no destination has.',
   ],
   [
+    "a consent entry that is not a list",
+    // @ts-expect-error A JavaScript caller can name one purpose instead of a list.
+    { consent: { product: "analytics" } },
+    "consent.product must be an own list of purpose strings.",
+  ],
+  [
+    "a consent entry listing a purpose that is not a string",
+    // @ts-expect-error A JavaScript caller can list a purpose that is not a string.
+    { consent: { product: ["analytics", 7] } },
+    "consent.product must be an own list of purpose strings.",
+  ],
+  [
+    "a consent entry the option only inherits",
+    // @ts-expect-error A literal's __proto__ sets its prototype, which the types read as a property.
+    { consent: { __proto__: { __proto__: null, product: ["analytics"] } } },
+    "consent.product must be an own list of purpose strings.",
+  ],
+  [
     "a defaults.to list naming a destination nobody configured",
     { defaults: { to: ["product", "warehouse"] } },
     'defaults.to names "warehouse", which no destination has.',

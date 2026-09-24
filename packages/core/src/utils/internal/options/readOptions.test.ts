@@ -30,7 +30,7 @@ test("every option left out takes its default", () => {
   expect(read.to).toBeUndefined();
   expect([...read.context]).toEqual([]);
   expect(read.schema).toEqual({ traits: null, groups: null });
-  expect(read.consent).toBeUndefined();
+  expect(read.consent).toEqual(new Map());
   expect(read.destinations).toEqual([
     {
       name: "product",
@@ -106,14 +106,18 @@ test("the registry is read once into its own map, so later changes to the object
   expect([...read.events]).toEqual([["App Opened", appOpened]]);
 });
 
-test("each destination gets an adapter of its own, gated when consent names it, and consent is handed on as it was read", () => {
-  const consent = { research: ["analytics"] };
+test("each destination gets an adapter of its own, gated when consent names it, and consent is read once into its own lists", () => {
+  const purposes = ["analytics"];
+  const consent: Record<string, string[]> = { research: purposes };
 
   const read = readOptions({
     events: {},
     destinations: { product, research },
     consent,
   });
+
+  purposes.push("advertising");
+  consent.product = ["analytics"];
 
   expect(read.destinations).toEqual([
     {
@@ -130,7 +134,53 @@ test("each destination gets an adapter of its own, gated when consent names it, 
   expect(
     read.destinations.every(({ adapter }) => Object.isFrozen(adapter)),
   ).toBe(true);
-  expect(read.consent).toBe(consent);
+  expect(read.consent).toEqual(new Map([["research", ["analytics"]]]));
+});
+
+test("a destination's list of purposes is read once, so the list that was checked is the list that is kept", () => {
+  const purposes = ["analytics"];
+
+  let reads = 0;
+
+  Object.defineProperty(purposes, 0, {
+    enumerable: true,
+    get: () => {
+      reads += 1;
+
+      return reads === 1 ? "analytics" : 7;
+    },
+  });
+
+  const read = readOptions({
+    events: {},
+    destinations: { product },
+    consent: { product: purposes },
+  });
+
+  expect(read.consent).toEqual(new Map([["product", ["analytics"]]]));
+  expect(reads).toBe(1);
+});
+
+test("a consent entry that is not an own list of purpose strings is refused by name", () => {
+  const inherited = { product: ["analytics"] };
+
+  Object.setPrototypeOf(inherited, null);
+
+  for (const consent of [
+    { product: "analytics" },
+    { product: ["analytics", 7] },
+    { product: null },
+    { __proto__: inherited },
+  ]) {
+    expect(() =>
+      readOptions({ events: {}, destinations: { product }, consent }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "INVALID_CONFIGURATION",
+        message: "consent.product must be an own list of purpose strings.",
+      }),
+    );
+  }
 });
 
 test("an adapter's name and open are read once, and its own adapter calls open on the application's adapter", () => {

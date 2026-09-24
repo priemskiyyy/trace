@@ -1,10 +1,8 @@
 import type { DiagnosticRecord } from "src/types/internal/DiagnosticRecord";
-import type { DiagnosticValue } from "src/types/internal/DiagnosticValue";
 import type { TraceDiagnosticEvent } from "src/types/TraceDiagnosticEvent";
 import type { TraceDiagnostics } from "src/types/TraceDiagnostics";
 import type { TraceSnapshot } from "src/types/TraceSnapshot";
 import { isolate } from "src/utils/common/isolate";
-import { isPlainObject } from "src/utils/common/isPlainObject";
 import { DIAGNOSTIC_TYPES } from "src/utils/constants/diagnostics";
 
 type State =
@@ -14,72 +12,6 @@ type State =
       snapshot: TraceSnapshot | null;
     }
   | { state: "DISPOSED"; snapshot: TraceSnapshot };
-
-const copyDiagnosticValue = (
-  value: unknown,
-  ancestors: Set<object>,
-): DiagnosticValue => {
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return value;
-  }
-
-  if (typeof value !== "object" || ancestors.has(value)) {
-    return null;
-  }
-
-  if (Array.isArray(value)) {
-    ancestors.add(value);
-
-    const items = Array.from(value, (item: unknown) =>
-      copyDiagnosticValue(item, ancestors),
-    );
-
-    ancestors.delete(value);
-    Object.freeze(items);
-
-    return items;
-  }
-
-  if (!isPlainObject(value)) {
-    return null;
-  }
-
-  ancestors.add(value);
-
-  const copy = Object.fromEntries(
-    Object.entries(value).map(([key, nested]) => [
-      key,
-      copyDiagnosticValue(nested, ancestors),
-    ]),
-  );
-
-  ancestors.delete(value);
-
-  return Object.freeze(copy);
-};
-
-const getContext = (context: DiagnosticRecord["context"]) => {
-  try {
-    return copyDiagnosticValue(context ?? null, new Set());
-  } catch {
-    return null;
-  }
-};
-
-const getTimestamp = (now: () => number) => {
-  try {
-    const timestamp = now();
-
-    return Number.isFinite(timestamp) ? timestamp : Date.now();
-  } catch {
-    return Date.now();
-  }
-};
 
 export class Diagnostics {
   #state: State;
@@ -200,8 +132,9 @@ export class Diagnostics {
           ? null
           : Object.freeze({ name: record.destination }),
       event: record.event === null ? null : Object.freeze({ id: record.event }),
-      timestamp: getTimestamp(this.#now),
-      context: getContext(record.context),
+      timestamp: this.#now(),
+      context:
+        record.context === undefined ? null : Object.freeze(record.context),
     });
   }
 

@@ -1,7 +1,7 @@
 import type { ConsentDecision } from "src/types/ConsentDecision";
 import type { DestinationHandle } from "src/types/DestinationHandle";
 import type { DestinationName } from "src/types/DestinationName";
-import type { DestinationOutcome } from "src/types/DestinationOutcome";
+import type { DestinationStatus } from "src/types/DestinationStatus";
 import type { Destinations } from "src/types/Destinations";
 import type { DropReason } from "src/types/DropReason";
 import type { EventDefinition } from "src/types/EventDefinition";
@@ -35,8 +35,11 @@ import { isolate } from "src/utils/common/isolate";
 import { ValueStore } from "src/utils/common/ValueStore";
 import { DIAGNOSTIC_TYPES } from "src/utils/constants/diagnostics";
 import {
+  DISPOSED_DESTINATION_STATUS,
   DISPOSED_TRACE_STATUS,
+  IDLE_DESTINATION_STATUS,
   IDLE_TRACE_STATUS,
+  READY_DESTINATION_STATUS,
   STARTED_TRACE_STATUS,
 } from "src/utils/constants/status";
 import { ConsentState } from "src/utils/internal/consent/ConsentState";
@@ -62,7 +65,7 @@ import { readOptions } from "src/utils/internal/options/readOptions";
 import { resolveRoute } from "src/utils/internal/routing/resolveRoute";
 import { TraceError } from "src/utils/TraceError";
 
-type Prepared = ReturnType<typeof prepareLayer>;
+type PreparedLayer = ReturnType<typeof prepareLayer>;
 
 type Validators = Map<string, StandardSchema<unknown, unknown>>;
 
@@ -83,9 +86,13 @@ const INVALID_TIMESTAMP: MappingLoss = Object.freeze({
   reason: "invalid",
 });
 
-const CONSENT_DROPPED: DestinationOutcome = Object.freeze({
-  status: "dropped",
-  reason: "consent",
+const SNAPSHOT_STATUSES = Object.freeze({
+  idle: IDLE_DESTINATION_STATUS,
+  ready: READY_DESTINATION_STATUS,
+  failed: Object.freeze({ state: "failed" }),
+  disposed: DISPOSED_DESTINATION_STATUS,
+} satisfies {
+  [TState in DestinationStatus["state"]]: { state: TState };
 });
 
 const MAX_TIMESTAMP = 8.64e15;
@@ -169,14 +176,14 @@ export class Trace<
     }
   >();
   #identity = new IdentityState();
-  #consent: ConsentState<TPurpose>;
+  #consent: ConsentState;
   #decisions: ValueStore<Record<TPurpose, ConsentDecision>>;
   #status = new ValueStore<TraceStatus>(IDLE_TRACE_STATUS);
   #diagnostics: Diagnostics;
   #listeners = new Set<{ listener: unknown }>();
   #releases = new Set<() => void>();
   #context: Layer;
-  #unscoped: Prepared = { layer: new Map(), refused: [] };
+  #unscoped: PreparedLayer = { layer: new Map(), refused: [] };
   #traitLosses = new Map<string, MappingLoss[]>();
   #groupLosses = new Map<
     string,
@@ -196,10 +203,10 @@ export class Trace<
     this.#defaultTo = read.to;
     this.#now = read.now;
     this.#context = read.context;
-    this.#consent = new ConsentState<TPurpose>({
-      required: read.consent ?? {},
-    });
-    this.#decisions = new ValueStore(this.#consent.state.get());
+    this.#consent = new ConsentState({ required: read.consent });
+    this.#decisions = new ValueStore<Record<TPurpose, ConsentDecision>>(
+      this.#consent.decisions(),
+    );
     this.#diagnostics = new Diagnostics({
       read: this.#readSnapshot,
       now: read.now,
@@ -236,7 +243,7 @@ export class Trace<
         timeout: read.timeout,
         now: read.now,
         isOpen: () => this.#consent.isOpen(name),
-        currentIdentity: this.#identity.target.get,
+        currentIdentity: this.#identity.target,
         record: this.#diagnostics.record,
         changed: this.#diagnostics.changed,
         depth,
@@ -389,7 +396,7 @@ export class Trace<
       return;
     }
 
-    const { generation } = this.#identity.target.get();
+    const { generation } = this.#identity.target();
     const id = getUsableId(readId(user));
 
     if (id === null) {
@@ -425,14 +432,14 @@ export class Trace<
       return;
     }
 
-    const { generation } = this.#identity.target.get();
+    const { generation } = this.#identity.target();
     const prepared = this.#prepare(() => traits, "traits", this.#schema.traits);
 
     if (!this.#isCurrent(generation)) {
       return;
     }
 
-    const before = this.#identity.target.get();
+    const before = this.#identity.target();
 
     if (prepared !== null) {
       this.#applyTraits(prepared.layer);
@@ -482,7 +489,7 @@ export class Trace<
       return;
     }
 
-    const { generation } = this.#identity.target.get();
+    const { generation } = this.#identity.target();
     const id = getUsableId(readId(group));
 
     if (id === null) {
@@ -502,7 +509,8 @@ export class Trace<
 
   /**
    * Merges into the context every event carries; a `null` value removes the
-   * key. It survives user changes.
+   * key. It survives user changes, and a context that cannot be sanitized
+   * changes nothing.
    *
    * @example
    * ```ts
@@ -516,9 +524,13 @@ export class Trace<
 
     const prepared = this.#prepare(() => context, "context", null);
 
-    if (prepared !== null) {
-      this.#context = composeContext([this.#context, prepared.layer]);
+    if (prepared === null || prepared.refused.length > 0) {
+      this.#record("runtime", DIAGNOSTIC_TYPES.CONTEXT_REFUSED, null);
+
+      return;
     }
+
+    this.#context = composeContext([this.#context, prepared.layer]);
   };
 
   /**
@@ -652,25 +664,25 @@ export class Trace<
 
     if (changed || refused.length > 0) {
       this.#record("consent", DIAGNOSTIC_TYPES.CONSENT_CHANGED, null, {
-        decisions: this.#consent.state.get(),
+        decisions: this.#consent.decisions(),
         refused,
       });
     }
 
     if (changed) {
       this.#diagnostics.changed();
-      this.#decisions.set(this.#consent.state.get());
+      this.#decisions.set(this.#consent.decisions());
     }
   };
 
   #readSnapshot = (): TraceSnapshot => {
-    const { generation, user } = this.#identity.target.get();
+    const { generation, user } = this.#identity.target();
 
     const destinations = Array.from(this.#lanes, ([name, { lane, adapter }]) =>
       Object.freeze({
         name,
         adapter,
-        status: lane.status.get(),
+        status: SNAPSHOT_STATUSES[lane.status.get().state],
         buffered: lane.buffered(),
         inFlight: lane.inFlight(),
       }),
@@ -681,7 +693,7 @@ export class Trace<
     return Object.freeze({
       status: this.#status.get(),
       identity: Object.freeze({ generation, user }),
-      consent: this.#consent.state.get(),
+      consent: this.#consent.decisions(),
       pendingReceipts: this.#pendingReceipts,
       destinations,
     });
@@ -693,7 +705,7 @@ export class Trace<
 
   // Validators and redact can change the user while data is prepared.
   #isCurrent(generation: number) {
-    return this.#identity.target.get().generation === generation;
+    return this.#identity.target().generation === generation;
   }
 
   #observe(subscribe: Subscribe): Subscribe {
@@ -716,7 +728,7 @@ export class Trace<
   #track(
     name: unknown,
     args: unknown[],
-    scope: Prepared | null,
+    scope: PreparedLayer | null,
   ): Receipt<DestinationName<TDestinations>> {
     const id = createEventId();
 
@@ -785,7 +797,7 @@ export class Trace<
     }
 
     const time = this.#getTime(call.timestamp);
-    const identity = this.#identity.target.get();
+    const identity = this.#identity.target();
 
     const event: TrackedEvent = Object.freeze({
       id,
@@ -804,13 +816,18 @@ export class Trace<
 
     Object.freeze(losses);
 
-    const route = resolveRoute({ configured: this.#names, to, event });
+    const route =
+      typeof to === "function"
+        ? resolveRoute({ configured: this.#names, to, event })
+        : candidates;
 
     if (route === null || route.length === 0) {
       return this.#drop(id, name, "not-routed");
     }
 
     const open = route.filter(this.#consent.isOpen);
+
+    Object.freeze(open);
 
     if (open.length === 0) {
       return this.#drop(id, name, "consent");
@@ -899,21 +916,12 @@ export class Trace<
       },
     });
 
-    for (const name of names) {
-      if (!this.#consent.isOpen(name)) {
-        land(name, CONSENT_DROPPED);
-        this.#diagnostics.record({
-          source: "event",
-          type: DIAGNOSTIC_TYPES.EVENT_DROPPED,
-          destination: name,
-          event: event.id,
-          context: { reason: "consent" },
-        });
-
+    for (const [name, { lane }] of this.#lanes) {
+      if (!names.includes(name)) {
         continue;
       }
 
-      this.#lanes.get(name)?.lane.enqueue({
+      lane.enqueue({
         event,
         identity,
         losses,
@@ -945,14 +953,12 @@ export class Trace<
     });
   }
 
-  #applyUser(user: { id: string; traits: Prepared | null } | null) {
-    const before = this.#identity.target.get();
+  #applyUser(user: { id: string; traits: PreparedLayer | null } | null) {
+    const before = this.#identity.target();
 
-    const change = this.#identity.setUser(
-      user === null ? null : { id: user.id, traits: {} },
-    );
+    const change = this.#identity.setUser(user);
 
-    const { generation, user: current } = this.#identity.target.get();
+    const { generation, user: current } = this.#identity.target();
     const ended = change.kind === "CHANGED" && change.ended;
 
     if (ended) {
@@ -1003,10 +1009,10 @@ export class Trace<
 
   #applyGroup(
     type: string,
-    group: { id: string; traits: Prepared | null } | null,
+    group: { id: string; traits: PreparedLayer | null } | null,
   ) {
     const path = `groups.${type}`;
-    const before = this.#identity.target.get();
+    const before = this.#identity.target();
 
     if (group === null) {
       this.#identity.setGroup(type, null);
@@ -1052,7 +1058,7 @@ export class Trace<
   }
 
   #syncIdentity(before: IdentityTarget) {
-    if (this.#identity.target.get() === before) {
+    if (this.#identity.target() === before) {
       return;
     }
 

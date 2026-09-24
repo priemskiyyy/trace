@@ -6,6 +6,7 @@ import type { FlushResult } from "src/types/FlushResult";
 import type { DiagnosticRecord } from "src/types/internal/DiagnosticRecord";
 import type { MappingLoss } from "src/types/MappingLoss";
 import type { TraceDiagnosticEvent } from "src/types/TraceDiagnosticEvent";
+import type { TraceDiagnosticType } from "src/types/TraceDiagnosticType";
 import type { TrackedEvent } from "src/types/TrackedEvent";
 import { DIAGNOSTIC_TYPES } from "src/utils/constants/diagnostics";
 import type { Diagnostics } from "src/utils/internal/diagnostics/Diagnostics";
@@ -19,10 +20,7 @@ declare const outcome: DestinationOutcome;
 declare const flush: FlushResult;
 declare const event: TrackedEvent;
 
-expectTypeOf<DiagnosticRecord["type"]>().toEqualTypeOf<
-  (typeof DIAGNOSTIC_TYPES)[keyof typeof DIAGNOSTIC_TYPES]
->();
-expectTypeOf<DiagnosticRecord["type"]>().toEqualTypeOf<
+expectTypeOf<TraceDiagnosticType>().toEqualTypeOf<
   | "trace started"
   | "trace disposed"
   | "destination ready"
@@ -34,6 +32,7 @@ expectTypeOf<DiagnosticRecord["type"]>().toEqualTypeOf<
   | "user refused"
   | "group refused"
   | "traits refused"
+  | "context refused"
   | "identity step failed"
   | "identity step unsupported"
   | "consent changed"
@@ -48,7 +47,10 @@ expectTypeOf<DiagnosticRecord["type"]>().toEqualTypeOf<
   | "flush completed"
   | "listener failed"
 >();
-expectTypeOf<TraceDiagnosticEvent["type"]>().toEqualTypeOf<string>();
+expectTypeOf<
+  TraceDiagnosticEvent["type"]
+>().toEqualTypeOf<TraceDiagnosticType>();
+expectTypeOf<DiagnosticRecord["type"]>().toEqualTypeOf<TraceDiagnosticType>();
 
 diagnostics.record({
   source: "event",

@@ -1,10 +1,13 @@
-import type { TraceDiagnosticEvent } from "@priemskiyyy/trace";
+import type {
+  TraceDiagnosticEvent,
+  TraceDiagnosticType,
+} from "@priemskiyyy/trace";
 import { expect, test } from "vitest";
 
 import { describeContext } from "src/utils/describeContext";
 
 const event = (
-  type: string,
+  type: TraceDiagnosticType,
   context: unknown,
   source: TraceDiagnosticEvent["source"] = "event",
 ): TraceDiagnosticEvent => ({
@@ -17,7 +20,7 @@ const event = (
 });
 
 const summary = (
-  type: string,
+  type: TraceDiagnosticType,
   context: unknown,
   source?: TraceDiagnosticEvent["source"],
 ) => describeContext(event(type, context, source)).summary;

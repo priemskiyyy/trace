@@ -1,5 +1,6 @@
 import type { Layer } from "src/types/internal/Layer";
 import type { PrivacyPolicy } from "src/types/internal/PrivacyPolicy";
+import type { MappingLoss } from "src/types/MappingLoss";
 import type { StandardSchema } from "src/types/StandardSchema";
 import { getOwnValue } from "src/utils/common/getOwnValue";
 import { isPlainObject } from "src/utils/common/isPlainObject";
@@ -7,6 +8,8 @@ import { getCappedLosses } from "src/utils/internal/intake/getCappedLosses";
 import { getLossesByKey } from "src/utils/internal/intake/getLossesByKey";
 import { sanitizeValue } from "src/utils/internal/privacy/sanitizeValue";
 import { validateWithSchema } from "src/utils/internal/schema/validateWithSchema";
+
+const GETTER = Symbol("getter");
 
 export const prepareLayer = (
   input: unknown,
@@ -36,7 +39,7 @@ export const prepareLayer = (
   for (const [key, descriptor] of Object.entries(
     Object.getOwnPropertyDescriptors(input),
   )) {
-    const value: unknown = descriptor.value;
+    const value: unknown = "get" in descriptor ? GETTER : descriptor.value;
 
     if (!descriptor.enumerable || value === undefined) {
       continue;
@@ -50,7 +53,7 @@ export const prepareLayer = (
       continue;
     }
 
-    if (value === null || validator === null) {
+    if (value === null || value === GETTER || validator === null) {
       accepted.push([key, value]);
 
       continue;
@@ -68,7 +71,7 @@ export const prepareLayer = (
   }
 
   const given = accepted.flatMap(([key, value]): [string, unknown][] => {
-    if (value === null) {
+    if (value === null || value === GETTER) {
       return [];
     }
 
@@ -84,8 +87,24 @@ export const prepareLayer = (
   );
 
   for (const [key, value] of accepted) {
+    const path = `${root}.${key}`;
+
+    if (value === GETTER) {
+      const losses: MappingLoss[] = [
+        Object.freeze({
+          path,
+          reason: policy.redact(key, path) ? "redacted" : "omitted",
+        }),
+      ];
+
+      Object.freeze(losses);
+      layer.set(key, Object.freeze({ value: undefined, losses }));
+
+      continue;
+    }
+
     if (value === null) {
-      const withheld = policy.redact(key, `${root}.${key}`);
+      const withheld = policy.redact(key, path);
 
       layer.set(
         key,

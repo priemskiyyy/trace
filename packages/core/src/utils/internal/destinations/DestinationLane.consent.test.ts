@@ -287,6 +287,34 @@ test("an entry that reaches a closed lane is dropped as consent before any ident
   expect(log).toEqual(["open", "collection false"]);
 });
 
+test("an entry that reaches a closed lane lands as consent at once, before the lane opens and after it is disposed", () => {
+  const { lane, log, enqueue, outcomes, records } = createLane({
+    gated: true,
+    consent: false,
+  });
+
+  enqueue("before");
+
+  expect(outcomes.get("before")).toEqual([CONSENT]);
+  expect(lane.buffered()).toBe(0);
+
+  lane.start();
+  lane.dispose();
+  enqueue("after");
+
+  expect(outcomes.get("after")).toEqual([CONSENT]);
+  expect(log).toEqual(["open", "collection false", "dispose"]);
+  expect(records.filter(({ type }) => type === "event dropped")).toEqual(
+    ["before", "after"].map((event) => ({
+      source: "event",
+      type: "event dropped",
+      destination: "product",
+      event,
+      context: { reason: "consent" },
+    })),
+  );
+});
+
 test("a collection switch that throws or rejects is contained, and consent still gates the lane", async () => {
   const unhandled = vi.fn();
 
@@ -432,7 +460,7 @@ test("a collection switch that rejects is recorded as destination collection fai
   expect(JSON.stringify(records)).not.toContain("the SDK cannot resume");
 });
 
-test("a collection switch that never settles is released at the lane's timeout, as destination collection failed", async () => {
+test("a collection switch that never settles releases the lane at its timeout with no diagnostic", async () => {
   vi.useFakeTimers();
 
   const { adapter } = withCollection((enabled) =>
@@ -460,6 +488,40 @@ test("a collection switch that never settles is released at the lane's timeout, 
     "identify ada",
     "track after",
   ]);
+  expect(records.map(({ type }) => type)).not.toContain(
+    "destination collection failed",
+  );
+});
+
+test("a collection switch that rejects after the lane's timeout is still recorded as destination collection failed", async () => {
+  vi.useFakeTimers();
+
+  const granting = createDeferred<void>();
+
+  const { adapter } = withCollection((enabled) =>
+    enabled ? granting.promise : undefined,
+  );
+
+  const { lane, records, enqueue, landed, setConsent } = createLane({
+    adapter,
+    gated: true,
+    consent: false,
+    timeout: 1_000,
+  });
+
+  lane.start();
+  setConsent(true);
+  enqueue("after");
+  await vi.advanceTimersByTimeAsync(1_000);
+
+  expect(await landed("after")).toEqual(SUBMITTED);
+  expect(records.map(({ type }) => type)).not.toContain(
+    "destination collection failed",
+  );
+
+  granting.reject(new Error("the SDK cannot resume"));
+  await vi.advanceTimersByTimeAsync(0);
+
   expect(
     records.filter((record) => record.type === "destination collection failed"),
   ).toStrictEqual([
@@ -554,7 +616,7 @@ test("a collection switch made while an identity step is in flight holds the ste
   expect(log.slice(5)).toEqual(["traits", "track after"]);
 });
 
-test("an event that reaches the lane while a revocation's switch is held waits in the buffer, so disposing lands it", async () => {
+test("an event that reaches the lane while a revocation's switch is held lands as consent at once, and disposing records no collection failure", async () => {
   const closing = createDeferred<void>();
 
   const { adapter } = withCollection((enabled) =>
@@ -570,14 +632,12 @@ test("an event that reaches the lane while a revocation's switch is held waits i
   setConsent(false);
   enqueue("unexpected", ADA);
 
-  expect(lane.buffered()).toBe(1);
+  expect(lane.buffered()).toBe(0);
 
   lane.dispose();
   await nextMacrotask();
 
-  expect(outcomes.get("unexpected")).toEqual([
-    { status: "dropped", reason: "disposed" },
-  ]);
+  expect(outcomes.get("unexpected")).toEqual([CONSENT]);
   expect(log).toEqual([
     "open",
     "collection true",

@@ -1,10 +1,10 @@
 import type { DiagnosticValue } from "src/types/internal/DiagnosticValue";
 import type { TraceDiagnosticEvent } from "src/types/TraceDiagnosticEvent";
-import type { DIAGNOSTIC_TYPES } from "src/utils/constants/diagnostics";
+import type { TraceDiagnosticType } from "src/types/TraceDiagnosticType";
 
 export type DiagnosticRecord = {
   source: TraceDiagnosticEvent["source"];
-  type: (typeof DIAGNOSTIC_TYPES)[keyof typeof DIAGNOSTIC_TYPES];
+  type: TraceDiagnosticType;
   destination: string | null;
   event: string | null;
   context?: Record<string, DiagnosticValue>;

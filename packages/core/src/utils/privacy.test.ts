@@ -121,6 +121,52 @@ test("a redacted trait or group trait is removed and reported on the receipt of 
   });
 });
 
+test("a getter at the top of a trait, a group trait or a context layer is an omitted loss on the receipt of every event it would have ridden, and a key given as undefined is absent", async () => {
+  const mock = createMockAdapter();
+  const trace = new Trace({ events, destinations: { product: mock.adapter } });
+  const getter = vi.fn(() => "computed");
+
+  const withGetter = (values: Record<string, unknown>, key: string) =>
+    Object.defineProperty(values, key, { enumerable: true, get: getter });
+
+  trace.start();
+  trace.user({
+    id: "ada",
+    traits: withGetter({ plan: "pro", gone: undefined }, "tier"),
+  });
+  trace.group("workspace", {
+    id: "w_1",
+    traits: withGetter({ size: 3, gone: undefined }, "region"),
+  });
+  trace.context(withGetter({ screen: "home", gone: undefined }, "locale"));
+
+  const losses = [
+    { path: "context.locale", reason: "omitted" },
+    { path: "traits.tier", reason: "omitted" },
+    { path: "groups.workspace.region", reason: "omitted" },
+  ];
+
+  const first = trace.track("App Opened");
+  const second = trace.track("App Opened");
+
+  await expect(first.settled).resolves.toEqual({
+    state: "settled",
+    outcomes: { product: submittedWith(losses) },
+  });
+  await expect(second.settled).resolves.toEqual({
+    state: "settled",
+    outcomes: { product: submittedWith(losses) },
+  });
+  expect(mock.sessions[0]?.events[0]?.context).toEqual({ screen: "home" });
+  expect(mock.sessions[0]?.events[0]?.identity).toEqual({
+    generation: 1,
+    user: { id: "ada" },
+    traits: { plan: "pro" },
+    groups: { workspace: { id: "w_1", traits: { size: 3 } } },
+  });
+  expect(getter).not.toHaveBeenCalled();
+});
+
 test("the loss of a trait goes when the trait is removed, a group's losses go with its membership, and every loss goes when the user changes", async () => {
   const mock = createMockAdapter();
   const trace = new Trace({ events, destinations: { product: mock.adapter } });

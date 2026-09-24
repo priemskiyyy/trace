@@ -46,7 +46,9 @@ export const prepareEvent = ({
     );
 
     const invalid = prepared.flatMap(({ refused }) =>
-      refused.map((path): MappingLoss => ({ path, reason: "invalid" })),
+      refused.map((path): MappingLoss =>
+        Object.freeze({ path, reason: "invalid" }),
+      ),
     );
 
     const losses = [

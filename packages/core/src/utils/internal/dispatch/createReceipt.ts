@@ -24,11 +24,11 @@ const getReceiptStatus = <TName extends string>(
 export const createReceipt = <TName extends string>({
   id,
   destinations,
-  onSettled = () => {},
+  onSettled,
 }: {
   id: string;
   destinations: TName[];
-  onSettled?: () => void;
+  onSettled: () => void;
 }) => {
   // A null prototype, so a destination named __proto__ stays an own key.
   const unanswered: Partial<Record<TName, DestinationOutcome | null>> =
@@ -38,14 +38,8 @@ export const createReceipt = <TName extends string>({
     unanswered[name] = null;
   }
 
-  const initial = getReceiptStatus(unanswered);
-  const status = new ValueStore(initial);
+  const status = new ValueStore(getReceiptStatus(unanswered));
   const completion = createDeferred<ReceiptStatus<TName>>();
-
-  if (initial.state === "settled") {
-    onSettled();
-    completion.resolve(initial);
-  }
 
   const receipt: Receipt<TName> = Object.freeze({
     id,

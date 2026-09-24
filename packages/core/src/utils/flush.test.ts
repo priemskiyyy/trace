@@ -59,6 +59,76 @@ test("flush is a barrier: work accepted after the call does not extend it", asyn
   expect(trace.diagnostics.get().destinations[0]?.inFlight).toBe(1);
 });
 
+test("a sign-in and its traits and group made just before a flush reach the provider before its flush is called", async () => {
+  const held: (() => void)[] = [];
+
+  const server = createMockAdapter({
+    onIdentity: () =>
+      new Promise<void>((resolve) => {
+        held.push(resolve);
+      }),
+  });
+
+  const trace = new Trace({ events, destinations: { server: server.adapter } });
+
+  trace.start();
+  trace.user({ id: "ada", traits: { plan: "pro" } });
+  trace.group("workspace", { id: "w_1", traits: { seats: 3 } });
+
+  const answers: unknown[] = [];
+
+  const flushed = trace.flush({ timeout: 1_000 }).then((result) => {
+    answers.push(result);
+  });
+
+  for (let step = 0; step < 3; step += 1) {
+    await Promise.resolve();
+    expect(answers).toEqual([]);
+    expect(server.sessions[0]?.flushes).toEqual([]);
+    held[step]?.();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  await flushed;
+
+  expect(answers).toEqual([
+    { drained: true, destinations: { server: { status: "flushed" } } },
+  ]);
+  expect(server.sessions[0]?.identity).toEqual([
+    { kind: "identify", user: { id: "ada" } },
+    { kind: "traits", user: { id: "ada" }, set: { plan: "pro" }, remove: [] },
+    {
+      kind: "group",
+      user: { id: "ada" },
+      group: { type: "workspace", id: "w_1", traits: { seats: 3 } },
+    },
+  ]);
+  expect(server.sessions[0]?.flushes).toHaveLength(1);
+});
+
+test("a flush whose identity pass outlasts it answers timeout and is not drained", async () => {
+  vi.useFakeTimers();
+
+  const server = createMockAdapter({
+    onIdentity: () => new Promise<void>(() => {}),
+  });
+
+  const trace = new Trace({ events, destinations: { server: server.adapter } });
+
+  trace.start();
+  trace.user({ id: "ada" });
+
+  const flushed = trace.flush({ timeout: 300 });
+
+  await vi.advanceTimersByTimeAsync(300);
+
+  await expect(flushed).resolves.toEqual({
+    drained: false,
+    destinations: { server: { status: "timeout" } },
+  });
+  expect(server.sessions[0]?.flushes).toEqual([]);
+});
+
 test("a destination that is not ready answers not-ready, and the flush is not drained", async () => {
   const ready = createMockAdapter();
 

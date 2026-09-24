@@ -31,6 +31,7 @@ export type { StandardSchema } from "src/types/StandardSchema";
 export type { TraceConsent } from "src/types/TraceConsent";
 export type { TraceDiagnosticEvent } from "src/types/TraceDiagnosticEvent";
 export type { TraceDiagnostics } from "src/types/TraceDiagnostics";
+export type { TraceDiagnosticType } from "src/types/TraceDiagnosticType";
 export type { TraceErrorCode } from "src/types/TraceErrorCode";
 export type { TraceEvents } from "src/types/TraceEvents";
 export type { TraceFlushResult } from "src/types/TraceFlushResult";

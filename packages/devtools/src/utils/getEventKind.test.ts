@@ -1,12 +1,14 @@
-import type { TraceDiagnosticEvent } from "@priemskiyyy/trace";
+import type {
+  TraceDiagnosticEvent,
+  TraceDiagnosticType,
+} from "@priemskiyyy/trace";
 import { expect, test } from "vitest";
 
-import type { DiagnosticType } from "src/types/internal/DiagnosticType";
 import type { RecordedEventKind } from "src/types/internal/RecordedEventKind";
 import { getEventKind } from "src/utils/getEventKind";
 
 const CLOSED_LIST: [
-  DiagnosticType,
+  TraceDiagnosticType,
   TraceDiagnosticEvent["source"],
   RecordedEventKind,
 ][] = [
@@ -21,6 +23,7 @@ const CLOSED_LIST: [
   ["user refused", "identity", "ERROR"],
   ["group refused", "identity", "ERROR"],
   ["traits refused", "identity", "ERROR"],
+  ["context refused", "runtime", "ERROR"],
   ["identity step failed", "identity", "ERROR"],
   ["identity step unsupported", "identity", "IDENTITY"],
   ["consent changed", "consent", "CONSENT"],
@@ -46,16 +49,19 @@ test("the failures, a buffer overflow and the refusals are errors, and every oth
   ).toEqual(CLOSED_LIST);
 });
 
-test("a phrase outside the closed list is filed under its source, even one that reads like a failure", () => {
-  expect(getEventKind({ source: "runtime", type: "network failed" })).toBe(
-    "RUNTIME",
-  );
-  expect(getEventKind({ source: "destination", type: "toString" })).toBe(
-    "DESTINATION",
-  );
-  expect(getEventKind({ source: "identity", type: "__proto__" })).toBe(
-    "IDENTITY",
-  );
+test("a phrase outside the closed list is filed under its source, even one that reads like a failure or names a key every object inherits", () => {
+  expect(
+    // @ts-expect-error A value from JavaScript can be outside the closed list.
+    getEventKind({ source: "runtime", type: "network failed" }),
+  ).toBe("RUNTIME");
+  expect(
+    // @ts-expect-error A value from JavaScript can name a key every object inherits.
+    getEventKind({ source: "destination", type: "toString" }),
+  ).toBe("DESTINATION");
+  expect(
+    // @ts-expect-error A value from JavaScript can name the prototype key.
+    getEventKind({ source: "identity", type: "__proto__" }),
+  ).toBe("IDENTITY");
 });
 
 test("a source outside the closed list fails loudly", () => {

@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import type { DestinationOutcome } from "src/types/DestinationOutcome";
 import type { MappingLoss } from "src/types/MappingLoss";
-import { copyTrackResult } from "src/utils/internal/destinations/copyTrackResult";
+import { getTrackOutcome } from "src/utils/internal/destinations/getTrackOutcome";
 import { TraceError } from "src/utils/TraceError";
 
 const redacted: MappingLoss = {
@@ -43,10 +43,10 @@ test("a submitted answer without an event or losses publishes null and no losses
   };
 
   expect(
-    copyTrackResult({ status: "submitted", evidence: "sdk-call-returned" }, []),
+    getTrackOutcome({ status: "submitted", evidence: "sdk-call-returned" }, []),
   ).toEqual(published);
   expect(
-    copyTrackResult(
+    getTrackOutcome(
       { status: "submitted", evidence: "sdk-call-returned", event: null },
       [],
     ),
@@ -55,7 +55,7 @@ test("a submitted answer without an event or losses publishes null and no losses
 
 test("losses are combined once, the event's first and then the adapter's", () => {
   expect(
-    copyTrackResult(
+    getTrackOutcome(
       {
         status: "submitted",
         evidence: "backend-acknowledged",
@@ -71,7 +71,7 @@ test("losses are combined once, the event's first and then the adapter's", () =>
     losses: [redacted, timestamp],
   });
   expect(
-    copyTrackResult(
+    getTrackOutcome(
       { status: "dropped", reason: "provider-filtered", losses: [timestamp] },
       [redacted],
     ),
@@ -81,9 +81,57 @@ test("losses are combined once, the event's first and then the adapter's", () =>
     losses: [redacted, timestamp],
   });
   expect(
-    copyTrackResult({ status: "dropped", reason: "provider-filtered" }, [
+    getTrackOutcome({ status: "dropped", reason: "provider-filtered" }, [
       redacted,
     ]),
+  ).toEqual({
+    status: "dropped",
+    reason: "provider-filtered",
+    losses: [redacted],
+  });
+});
+
+test("a path and reason the adapter reports again is listed once, where it first appeared", () => {
+  const truncated: MappingLoss = {
+    path: "properties.card",
+    reason: "truncated",
+  };
+
+  expect(
+    getTrackOutcome(
+      {
+        status: "submitted",
+        evidence: "sdk-call-returned",
+        losses: [
+          timestamp,
+          { ...redacted },
+          truncated,
+          { ...timestamp },
+          { path: "properties.card.cvc", reason: "omitted" },
+        ],
+      },
+      [redacted, truncated],
+    ),
+  ).toEqual({
+    status: "submitted",
+    evidence: "sdk-call-returned",
+    event: null,
+    losses: [
+      redacted,
+      truncated,
+      timestamp,
+      { path: "properties.card.cvc", reason: "omitted" },
+    ],
+  });
+  expect(
+    getTrackOutcome(
+      {
+        status: "dropped",
+        reason: "provider-filtered",
+        losses: [{ ...redacted }],
+      },
+      [redacted],
+    ),
   ).toEqual({
     status: "dropped",
     reason: "provider-filtered",
@@ -96,7 +144,7 @@ test("the event and the losses are copied, so neither the adapter nor the event 
   const adapterLosses: MappingLoss[] = [{ ...timestamp }];
   const eventLosses: MappingLoss[] = [{ ...redacted }];
 
-  const outcome = copyTrackResult(
+  const outcome = getTrackOutcome(
     {
       status: "submitted",
       evidence: "sdk-callback-completed",
@@ -120,7 +168,7 @@ test("the event and the losses are copied, so neither the adapter nor the event 
 
 test("a published outcome is frozen through and through", () => {
   const outcomes = [
-    copyTrackResult(
+    getTrackOutcome(
       {
         status: "submitted",
         evidence: "sdk-call-returned",
@@ -129,14 +177,14 @@ test("a published outcome is frozen through and through", () => {
       },
       [{ ...redacted }],
     ),
-    copyTrackResult({ status: "dropped", reason: "provider-filtered" }, [
+    getTrackOutcome({ status: "dropped", reason: "provider-filtered" }, [
       { ...redacted },
     ]),
-    copyTrackResult({ status: "skipped", reason: "unidentified" }, []),
-    copyTrackResult({ status: "indeterminate", reason: "ambiguous" }, []),
+    getTrackOutcome({ status: "skipped", reason: "unidentified" }, []),
+    getTrackOutcome({ status: "indeterminate", reason: "ambiguous" }, []),
   ];
 
-  const failed = copyTrackResult(
+  const failed = getTrackOutcome(
     { status: "failed", error: new Error("network down") },
     [],
   );
@@ -157,13 +205,13 @@ test("every other answer the contract allows is published as a copy of itself", 
   ];
 
   for (const answer of answers) {
-    const outcome = copyTrackResult(answer, [redacted]);
+    const outcome = getTrackOutcome(answer, [redacted]);
 
     expect(outcome).toEqual(answer);
     expect(outcome).not.toBe(answer);
   }
 
-  const failed = copyTrackResult({ status: "failed", error: failure }, []);
+  const failed = getTrackOutcome({ status: "failed", error: failure }, []);
 
   expect(failed.status === "failed" ? failed.error : null).toBe(failure);
 });
@@ -180,7 +228,7 @@ test("an answer with a status the contract does not know becomes failed with Tra
   ];
 
   for (const answer of answers) {
-    expect(getInvalidAnswer(copyTrackResult(answer, []))).toEqual(
+    expect(getInvalidAnswer(getTrackOutcome(answer, []))).toEqual(
       invalidAnswer,
     );
   }
@@ -197,7 +245,7 @@ test("an answer that claims a reason only the core may give becomes failed with 
   ];
 
   for (const answer of answers) {
-    expect(getInvalidAnswer(copyTrackResult(answer, []))).toEqual(
+    expect(getInvalidAnswer(getTrackOutcome(answer, []))).toEqual(
       invalidAnswer,
     );
   }
@@ -227,7 +275,7 @@ test("a submitted answer whose evidence, event or losses break the contract beco
   ];
 
   for (const answer of answers) {
-    expect(getInvalidAnswer(copyTrackResult(answer, []))).toEqual(
+    expect(getInvalidAnswer(getTrackOutcome(answer, []))).toEqual(
       invalidAnswer,
     );
   }
@@ -242,7 +290,7 @@ test("an answer whose fields throw when read is a failed outcome with that error
     },
   };
 
-  expect(copyTrackResult(answer, [])).toEqual({
+  expect(getTrackOutcome(answer, [])).toEqual({
     status: "failed",
     error: failure,
   });

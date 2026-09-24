@@ -1,7 +1,6 @@
 import { expect, test, vi } from "vitest";
 
 import type { DiagnosticRecord } from "src/types/internal/DiagnosticRecord";
-import type { DiagnosticValue } from "src/types/internal/DiagnosticValue";
 import type { TraceDiagnosticEvent } from "src/types/TraceDiagnosticEvent";
 import type { TraceSnapshot } from "src/types/TraceSnapshot";
 import { Diagnostics } from "src/utils/internal/diagnostics/Diagnostics";
@@ -74,25 +73,19 @@ test("several changes in one turn notify observers once", async () => {
   expect(listener.mock.calls).toEqual([[]]);
 });
 
-test("with no listener, recording an event costs a check and reads nothing", () => {
+test("with no listener, recording an event costs a check: the clock is not read and the context is left as it was", () => {
   const { diagnostics, now } = create();
-  const readContext = vi.fn(() => "consent");
   const listener = vi.fn<(event: TraceDiagnosticEvent) => void>();
-
-  const context = {
-    get reason() {
-      return readContext();
-    },
-  };
+  const context = { reason: "consent" };
 
   diagnostics.record({ ...accepted, context });
 
   expect(now).not.toHaveBeenCalled();
-  expect(readContext).not.toHaveBeenCalled();
+  expect(Object.isFrozen(context)).toBe(false);
 
   const stop = diagnostics.api.events.subscribe(listener);
 
-  diagnostics.record({ ...accepted, context });
+  diagnostics.record({ ...accepted, context: { reason: "consent" } });
   stop();
   diagnostics.record({ ...accepted, context });
 
@@ -109,15 +102,19 @@ test("with no listener, recording an event costs a check and reads nothing", () 
     ],
   ]);
   expect(now.mock.calls).toEqual([[]]);
-  expect(readContext.mock.calls).toEqual([[]]);
+  expect(Object.isFrozen(context)).toBe(false);
 });
 
-test("a published event names its destination and event, and is one frozen copy every listener shares", () => {
+test("a published event names its destination and event, and is one frozen event every listener shares", () => {
   const { diagnostics } = create();
   const first = vi.fn<(event: TraceDiagnosticEvent) => void>();
   const second = vi.fn<(event: TraceDiagnosticEvent) => void>();
-  const losses = [{ path: "properties.card.cvc", reason: "redacted" }];
 
+  const losses = [
+    Object.freeze({ path: "properties.card.cvc", reason: "redacted" }),
+  ];
+
+  Object.freeze(losses);
   diagnostics.api.events.subscribe(first);
   diagnostics.api.events.subscribe(second);
 
@@ -128,7 +125,6 @@ test("a published event names its destination and event, and is one frozen copy 
     event: "event-1",
     context: { losses },
   });
-  losses.push({ path: "changed by the recorder", reason: "redacted" });
 
   const published = first.mock.calls[0]?.[0];
 
@@ -234,99 +230,6 @@ test("subscribing after disposal is a no-op rather than a leak", async () => {
   stopEvents();
 
   expect(listener).not.toHaveBeenCalled();
-});
-
-test("a context publishes plain data only, so an error or any other object with a class becomes null", () => {
-  const { diagnostics } = create();
-  const listener = vi.fn<(event: TraceDiagnosticEvent) => void>();
-
-  const error = Object.assign(new Error("token=abc"), {
-    config: { headers: { Authorization: "Bearer secret" } },
-  });
-
-  const context = {
-    reason: "failed",
-    error,
-    when: new Date(0),
-    tags: new Map([["plan", "pro"]]),
-    handler: () => "secret",
-    missing: undefined,
-    bare: { __proto__: null, reason: "kept" },
-    list: [1, "a", error],
-  };
-
-  diagnostics.api.events.subscribe(listener);
-  // @ts-expect-error An untyped recorder passed an error and other objects with a class.
-  diagnostics.record({ ...accepted, context });
-
-  expect(listener.mock.calls[0]?.[0].context).toEqual({
-    reason: "failed",
-    error: null,
-    when: null,
-    tags: null,
-    handler: null,
-    missing: null,
-    bare: { reason: "kept" },
-    list: [1, "a", null],
-  });
-});
-
-test("recording never throws: a cycle is cut, and a context that cannot be read is published as null", () => {
-  const { diagnostics } = create();
-  const listener = vi.fn<(event: TraceDiagnosticEvent) => void>();
-  const shared = { path: "timestamp" };
-
-  const cyclic: Record<string, DiagnosticValue> = {
-    reason: "cycle",
-    first: shared,
-    second: shared,
-  };
-
-  const unreadable = {
-    get reason(): string {
-      throw new Error("getter exploded");
-    },
-  };
-
-  cyclic.self = cyclic;
-  diagnostics.api.events.subscribe(listener);
-  diagnostics.record({ ...accepted, context: cyclic });
-  diagnostics.record({ ...accepted, context: unreadable });
-
-  expect(listener.mock.calls.map(([event]) => event.context)).toEqual([
-    {
-      reason: "cycle",
-      first: { path: "timestamp" },
-      second: { path: "timestamp" },
-      self: null,
-    },
-    null,
-  ]);
-});
-
-test("a clock that throws or answers NaN falls back to Date.now", () => {
-  vi.spyOn(Date, "now").mockReturnValue(7);
-
-  const listener = vi.fn<(event: TraceDiagnosticEvent) => void>();
-
-  const throwing = new Diagnostics({
-    read: () => snapshotOf(0),
-    now: () => {
-      throw new Error("clock failed");
-    },
-  });
-
-  const broken = new Diagnostics({
-    read: () => snapshotOf(0),
-    now: () => Number.NaN,
-  });
-
-  throwing.api.events.subscribe(listener);
-  broken.api.events.subscribe(listener);
-  throwing.record(accepted);
-  broken.record(accepted);
-
-  expect(listener.mock.calls.map(([event]) => event.timestamp)).toEqual([7, 7]);
 });
 
 test("a record made from inside a listener reaches every listener after the event being delivered", () => {

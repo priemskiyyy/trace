@@ -22,6 +22,7 @@ test("a receipt starts pending with a null slot for every destination", () => {
   const { receipt } = createReceipt({
     id: "event-1",
     destinations: ["product", "research"],
+    onSettled: () => {},
   });
 
   expect(receipt.id).toBe("event-1");
@@ -35,6 +36,7 @@ test("it settles once every destination has landed, and not before", async () =>
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product", "research"],
+    onSettled: () => {},
   });
 
   const settled = vi.fn();
@@ -66,6 +68,7 @@ test("the first landing for a destination stands and a second one is ignored, ev
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product", "research"],
+    onSettled: () => {},
   });
 
   land("product", { status: "indeterminate", reason: "timeout" });
@@ -84,6 +87,7 @@ test("a landing for a destination the receipt does not wait for is ignored", () 
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product"],
+    onSettled: () => {},
   });
 
   // @ts-expect-error The caller named a destination this receipt was not created for.
@@ -101,6 +105,7 @@ test("a receipt settles exactly once, and observers hear each landing until it d
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product", "research"],
+    onSettled: () => {},
   });
 
   const listener = vi.fn();
@@ -127,6 +132,7 @@ test("settled never rejects, whatever the destinations answered", async () => {
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product", "research"],
+    onSettled: () => {},
   });
 
   const failure = new Error("offline");
@@ -147,6 +153,7 @@ test("every status a receipt hands out is frozen, down to its outcomes", () => {
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product", "research"],
+    onSettled: () => {},
   });
 
   const pending = receipt.status.get();
@@ -169,17 +176,11 @@ test("every status a receipt hands out is frozen, down to its outcomes", () => {
   expect([pending, partial, final].every(isDeepFrozen)).toBe(true);
 });
 
-test("a receipt with no destination to wait for is settled from the start", async () => {
-  const { receipt } = createReceipt({ id: "event-1", destinations: [] });
-
-  expect(receipt.status.get()).toEqual({ state: "settled", outcomes: {} });
-  await expect(receipt.settled).resolves.toBe(receipt.status.get());
-});
-
 test("a destination named __proto__ gets a slot of its own, so the receipt waits for it", () => {
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product", "__proto__"],
+    onSettled: () => {},
   });
 
   land("product", submitted);
@@ -202,6 +203,7 @@ test("a landing made from inside a status listener settles the receipt once", as
   const { receipt, land } = createReceipt({
     id: "event-1",
     destinations: ["product", "research"],
+    onSettled: () => {},
   });
 
   const states: string[] = [];
@@ -249,14 +251,6 @@ test("the settled callback runs once, before any listener hears the settled stat
   land("research", submitted);
 
   expect(log).toEqual(["listener pending", "settled", "listener settled"]);
-});
-
-test("a receipt with nothing to wait for runs its settled callback at once", () => {
-  const onSettled = vi.fn();
-
-  createReceipt({ id: "event-1", destinations: [], onSettled });
-
-  expect(onSettled.mock.calls).toEqual([[]]);
 });
 
 test("the receipt and its status are frozen, and a listener hears the landing that settles it", () => {

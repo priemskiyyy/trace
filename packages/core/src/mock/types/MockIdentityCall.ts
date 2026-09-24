@@ -1,3 +1,7 @@
+import type { GroupUpdate } from "src/types/GroupUpdate";
+import type { IdentifyUpdate } from "src/types/IdentifyUpdate";
+import type { TraitsUpdate } from "src/types/TraitsUpdate";
+
 /**
  * One identity call a mock session recorded, with the update it received.
  *
@@ -7,20 +11,7 @@
  * ```
  */
 export type MockIdentityCall =
-  | { kind: "identify"; user: { id: string } }
-  | {
-      kind: "traits";
-      user: { id: string } | null;
-      set: Record<string, unknown>;
-      remove: string[];
-    }
-  | {
-      kind: "group";
-      user: { id: string } | null;
-      group: {
-        type: string;
-        id: string | null;
-        traits: Record<string, unknown>;
-      };
-    }
+  | ({ kind: "identify" } & IdentifyUpdate)
+  | ({ kind: "traits" } & TraitsUpdate)
+  | ({ kind: "group" } & GroupUpdate)
   | { kind: "reset" };

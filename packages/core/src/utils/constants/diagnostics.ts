@@ -11,6 +11,7 @@ export const DIAGNOSTIC_TYPES = Object.freeze({
   USER_REFUSED: "user refused",
   GROUP_REFUSED: "group refused",
   TRAITS_REFUSED: "traits refused",
+  CONTEXT_REFUSED: "context refused",
   IDENTITY_STEP_FAILED: "identity step failed",
   IDENTITY_STEP_UNSUPPORTED: "identity step unsupported",
   CONSENT_CHANGED: "consent changed",

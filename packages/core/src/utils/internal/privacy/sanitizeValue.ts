@@ -15,20 +15,25 @@ type Walk = {
 
 const OMIT = Symbol("omit");
 
+const isRecorded = (walk: Walk, path: string, reason: MappingLoss["reason"]) =>
+  walk.losses.some((loss) => loss.path === path && loss.reason === reason);
+
 const recordLoss = (
   walk: Walk,
   path: string,
   reason: MappingLoss["reason"],
 ) => {
-  const { breadth } = walk.policy.limits;
+  if (isRecorded(walk, path, reason)) {
+    return;
+  }
 
-  if (walk.losses.length < breadth) {
+  if (walk.losses.length < walk.policy.limits.breadth) {
     walk.losses.push(Object.freeze({ path, reason }));
 
     return;
   }
 
-  if (walk.losses.length === breadth) {
+  if (!isRecorded(walk, walk.root, "truncated")) {
     walk.losses.push(Object.freeze({ path: walk.root, reason: "truncated" }));
   }
 };
@@ -165,8 +170,18 @@ const sanitizeProperty = (
   path: string,
   depth: number,
 ) => {
+  const accessor = descriptor !== undefined && "get" in descriptor;
+
+  if (!accessor && descriptor?.value === undefined) {
+    return OMIT;
+  }
+
   if (walk.policy.redact(key, path)) {
     return omit(walk, path, "redacted");
+  }
+
+  if (accessor) {
+    return omit(walk, path, "omitted");
   }
 
   return sanitize(walk, descriptor?.value, path, depth + 1);
@@ -340,10 +355,6 @@ const sanitize = (
   path: string,
   depth: number,
 ): unknown => {
-  if (value === undefined) {
-    return omit(walk, path, "omitted");
-  }
-
   if (typeof value === "object" && value !== null) {
     return sanitizeContainer(walk, value, path, depth);
   }

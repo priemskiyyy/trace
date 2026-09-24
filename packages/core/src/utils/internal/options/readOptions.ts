@@ -19,12 +19,12 @@ import { resolveDuration } from "src/utils/internal/options/resolveDuration";
 import { isSensitiveKey } from "src/utils/isSensitiveKey";
 import { TraceError } from "src/utils/TraceError";
 
-type Options<TDestinations extends Destinations, TConsent> = {
+type Options<TDestinations extends Destinations> = {
   events: Record<string, EventDefinition<never, unknown>>;
   destinations: TDestinations;
   schema?: TraceSchema | undefined;
   defaults?: { to?: unknown; context?: unknown } | undefined;
-  consent?: TConsent;
+  consent?: unknown;
   privacy?: TracePrivacy | undefined;
   buffer?: { capacity?: unknown; maxAge?: unknown } | undefined;
   timeout?: unknown;
@@ -54,9 +54,27 @@ const readEvents = (
   return definitions;
 };
 
+const readPurposes = (consent: Record<string, unknown>, name: string) => {
+  const purposes = consent[name];
+
+  if (Array.isArray(purposes)) {
+    const list: unknown[] = [...purposes];
+
+    if (list.every((purpose) => typeof purpose === "string")) {
+      return list;
+    }
+  }
+
+  throw createInvalid(
+    `consent.${name} must be an own list of purpose strings.`,
+  );
+};
+
 const readConsent = (consent: unknown, names: string[]) => {
+  const gates = new Map<string, string[]>();
+
   if (consent === undefined || consent === null) {
-    return [];
+    return gates;
   }
 
   if (!isPlainObject(consent)) {
@@ -65,15 +83,30 @@ const readConsent = (consent: unknown, names: string[]) => {
     );
   }
 
-  const gated = Object.getOwnPropertyNames(consent);
-
-  for (const name of gated) {
+  for (const name of Object.getOwnPropertyNames(consent)) {
     if (!names.includes(name)) {
       throw createInvalid(`consent names "${name}", which no destination has.`);
     }
+
+    gates.set(name, readPurposes(consent, name));
   }
 
-  return gated;
+  const parent = Reflect.getPrototypeOf(consent);
+
+  for (const name of names) {
+    if (
+      !gates.has(name) &&
+      parent !== null &&
+      parent !== Object.prototype &&
+      Object.hasOwn(parent, name)
+    ) {
+      throw createInvalid(
+        `consent.${name} must be an own list of purpose strings.`,
+      );
+    }
+  }
+
+  return gates;
 };
 
 const readAdapter = (
@@ -218,8 +251,8 @@ const getClock = (now: unknown) => () => {
   }
 };
 
-const readAll = <TDestinations extends Destinations, TConsent>(
-  options: Options<TDestinations, TConsent>,
+const readAll = <TDestinations extends Destinations>(
+  options: Options<TDestinations>,
 ) => {
   const events = readEvents(options.events);
   const configured = options.destinations;
@@ -235,8 +268,7 @@ const readAll = <TDestinations extends Destinations, TConsent>(
   }
 
   const names = Object.keys(configured);
-  const consent = options.consent;
-  const gated = readConsent(consent, names);
+  const consent = readConsent(options.consent, names);
   const defaults: { to?: unknown; context?: unknown } = options.defaults ?? {};
   const privacy: TracePrivacy = options.privacy ?? {};
   const limits: Partial<TraceLimits> = privacy.limits ?? {};
@@ -257,7 +289,7 @@ const readAll = <TDestinations extends Destinations, TConsent>(
     destinations.push({
       name,
       adapter: readAdapter(name, configured[name]),
-      gated: gated.includes(name),
+      gated: consent.has(name),
     });
   }
 
@@ -318,8 +350,8 @@ const readAll = <TDestinations extends Destinations, TConsent>(
   };
 };
 
-export const readOptions = <TDestinations extends Destinations, TConsent>(
-  options: Options<TDestinations, TConsent>,
+export const readOptions = <TDestinations extends Destinations>(
+  options: Options<TDestinations>,
 ) => {
   try {
     return readAll(options);

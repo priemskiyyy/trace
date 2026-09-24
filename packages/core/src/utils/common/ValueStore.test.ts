@@ -131,14 +131,3 @@ test("asynchronous listener failures do not interrupt notification", async () =>
   expect(errors).toHaveLength(1);
   expect(errors[0]).toThrow(failure);
 });
-
-test("the observable view reads and follows the store, and has no way to set it", () => {
-  const store = new ValueStore("idle");
-  const listener = vi.fn();
-
-  store.observable.subscribe(listener);
-  store.set("ready");
-  expect(store.observable.get()).toBe("ready");
-  expect(listener.mock.calls).toEqual([[]]);
-  expect(Object.keys(store.observable)).toEqual(["get", "subscribe"]);
-});

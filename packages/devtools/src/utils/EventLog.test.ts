@@ -1,10 +1,14 @@
-import type { TraceDiagnosticEvent, TrackedEvent } from "@priemskiyyy/trace";
+import type {
+  TraceDiagnosticEvent,
+  TraceDiagnosticType,
+  TrackedEvent,
+} from "@priemskiyyy/trace";
 import { expect, test } from "vitest";
 
 import { EventLog } from "src/utils/EventLog";
 
 const diagnostic = (
-  type: string,
+  type: TraceDiagnosticType,
   context: unknown = null,
   source: TraceDiagnosticEvent["source"] = "destination",
 ): TraceDiagnosticEvent => ({

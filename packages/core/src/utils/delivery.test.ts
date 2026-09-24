@@ -602,6 +602,54 @@ test("null removes a key from the default context, and later events go without i
   });
 });
 
+test("a context the sanitizer refuses, or one whose redact throws, changes nothing and records context refused", () => {
+  const mock = createMockAdapter();
+
+  let failing = false;
+
+  const trace = new Trace({
+    events,
+    destinations: { product: mock.adapter },
+    privacy: {
+      redact: () => {
+        if (failing) {
+          throw new Error("redact failed");
+        }
+
+        return false;
+      },
+    },
+  });
+
+  const refused: unknown[] = [];
+
+  trace.diagnostics.events.subscribe((diagnostic) => {
+    if (diagnostic.type === "context refused") {
+      refused.push(diagnostic);
+    }
+  });
+  trace.start();
+  trace.context({ screen: "home" });
+  // @ts-expect-error A JavaScript caller can pass a context that is not an object.
+  trace.context("cart");
+  failing = true;
+  trace.context({ screen: "cart" });
+  failing = false;
+  trace.track("App Opened");
+
+  expect(mock.sessions[0]?.events[0]?.context).toEqual({ screen: "home" });
+  expect(refused).toEqual(
+    Array.from({ length: 2 }, () => ({
+      source: "runtime",
+      type: "context refused",
+      destination: null,
+      event: null,
+      timestamp: expect.any(Number),
+      context: null,
+    })),
+  );
+});
+
 test("the default context survives a user change, and a call's context never outlives its event", () => {
   const mock = createMockAdapter();
   const trace = new Trace({ events, destinations: { product: mock.adapter } });

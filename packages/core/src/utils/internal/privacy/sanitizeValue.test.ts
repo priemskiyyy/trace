@@ -218,7 +218,7 @@ test("an array item that is removed keeps its position as null", () => {
   });
 });
 
-test("an array hole is carried as null, never as a value inherited from the prototype", () => {
+test("an array hole is carried as null with no loss, never as a value inherited from the prototype", () => {
   const list = new Array<unknown>(1);
   const prototype: unknown[] = [];
 
@@ -227,7 +227,7 @@ test("an array hole is carried as null, never as a value inherited from the prot
 
   expect(sanitizeValue({ list }, policy(), "properties")).toStrictEqual({
     value: { list: [null] },
-    losses: [{ path: "properties.list.0", reason: "omitted" }],
+    losses: [],
   });
 });
 
@@ -296,20 +296,34 @@ test("non-finite numbers, functions and symbols are removed as invalid", () => {
   });
 });
 
-test("an invalid Date is removed as invalid, undefined is omitted, and null is carried", () => {
+test("an invalid Date is removed as invalid, a key given as undefined is absent, an undefined item becomes null, and null is carried", () => {
+  const asked: string[] = [];
+
   expect(
     sanitizeValue(
-      { never: new Date("not a date"), missing: undefined, nothing: null },
-      policy(),
+      {
+        never: new Date("not a date"),
+        missing: undefined,
+        nothing: null,
+        list: [undefined, 1],
+      },
+      policy((_key, path) => {
+        asked.push(path);
+
+        return false;
+      }),
       "properties",
     ),
   ).toStrictEqual({
-    value: { nothing: null },
-    losses: [
-      { path: "properties.never", reason: "invalid" },
-      { path: "properties.missing", reason: "omitted" },
-    ],
+    value: { nothing: null, list: [null, 1] },
+    losses: [{ path: "properties.never", reason: "invalid" }],
   });
+  expect(asked).toEqual([
+    "properties.never",
+    "properties.nothing",
+    "properties.list",
+    "properties.list.1",
+  ]);
 });
 
 test("an object that is not plain, such as a Map, a Set, an Error, a typed array or a class instance, is removed as unsupported", () => {
@@ -627,6 +641,35 @@ test("losses stop at the breadth limit, and one truncated loss at the root says 
       { path: "properties.b.x", reason: "invalid" },
       { path: "properties", reason: "truncated" },
     ],
+  });
+});
+
+test("a loss is recorded once, so the cut of a wide object is not repeated for the keys past the breadth", () => {
+  expect(
+    sanitizeValue(
+      { a: () => {}, b: () => {}, c: () => {} },
+      limited({ breadth: 2 }),
+      "properties",
+    ),
+  ).toStrictEqual({
+    value: {},
+    losses: [
+      { path: "properties", reason: "truncated" },
+      { path: "properties.a", reason: "invalid" },
+    ],
+  });
+});
+
+test("a list cut for its length and again for the total size records one loss", () => {
+  expect(
+    sanitizeValue(
+      { list: ["aaaa", "bbbb", "cccc"] },
+      limited({ breadth: 2, totalSize: 19 }),
+      "properties",
+    ),
+  ).toStrictEqual({
+    value: { list: ["aaaa"] },
+    losses: [{ path: "properties.list", reason: "truncated" }],
   });
 });
 

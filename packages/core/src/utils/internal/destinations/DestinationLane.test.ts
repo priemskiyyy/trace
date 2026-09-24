@@ -22,6 +22,8 @@ const ADA: IdentityTarget = {
   groups: {},
 };
 
+const ADA_PRO: IdentityTarget = { ...ADA, traits: { plan: "pro" } };
+
 const SUBMITTED: DestinationOutcome = {
   status: "submitted",
   evidence: "sdk-call-returned",
@@ -887,6 +889,143 @@ test("a flush waiting for the provider's answer when the lane is disposed answer
   expect(mock.sessions[0]?.flushes[0]?.context.signal.aborted).toBe(true);
 
   await flushed;
+});
+
+test("a lane disposed after a flush's wait ended and before the flush goes on answers not-ready and never calls the provider's flush", async () => {
+  const { lane, log } = createLane();
+
+  lane.start();
+
+  const flushed = lane.flush({ timeout: 1_000 });
+
+  queueMicrotask(() => lane.dispose());
+
+  await expect(flushed).resolves.toEqual({ status: "not-ready" });
+  expect(log).toEqual(["open", "dispose"]);
+});
+
+test("flush waits for the identity pass running at the call before it calls the provider's flush", async () => {
+  const step = createDeferred<void>();
+
+  const { lane, log, setIdentity } = createLane({
+    mock: { onIdentity: () => step.promise },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  lane.identityChanged();
+
+  const answers: unknown[] = [];
+
+  const flushed = lane
+    .flush({ timeout: 1_000 })
+    .then((result) => answers.push(result));
+
+  await nextMacrotask();
+
+  expect(answers).toEqual([]);
+  expect(log).toEqual(["open", "identify ada"]);
+
+  step.resolve();
+  await flushed;
+
+  expect(answers).toEqual([{ status: "flushed" }]);
+  expect(log).toEqual(["open", "identify ada", "flush"]);
+});
+
+test("flush waits for an identity pass requested behind an entry at the call, and not for one requested after it", async () => {
+  const identify = createDeferred<void>();
+  const traits = createDeferred<void>();
+
+  const { lane, log, enqueue, setIdentity } = createLane({
+    mock: {
+      onIdentity: (call) => {
+        if (call.kind === "identify") {
+          return identify.promise;
+        }
+
+        if (call.kind === "traits") {
+          return traits.promise;
+        }
+
+        return new Promise<void>(() => {});
+      },
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  enqueue("waiting", ADA);
+  setIdentity(ADA_PRO);
+  lane.identityChanged();
+
+  const answers: unknown[] = [];
+
+  const flushed = lane
+    .flush({ timeout: 1_000 })
+    .then((result) => answers.push(result));
+
+  identify.resolve();
+  await nextMacrotask();
+
+  expect(answers).toEqual([]);
+  expect(log).toEqual(["open", "identify ada", "track waiting", "traits"]);
+
+  setIdentity({ ...ADA_PRO, groups: { workspace: { id: "w_1", traits: {} } } });
+  lane.identityChanged();
+  traits.resolve();
+  await flushed;
+
+  expect(answers).toEqual([{ status: "flushed" }]);
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "track waiting",
+    "traits",
+    "group workspace",
+    "flush",
+  ]);
+});
+
+test("a flush whose identity pass never settles answers timeout without calling the provider's flush", async () => {
+  vi.useFakeTimers();
+
+  const { lane, log, setIdentity } = createLane({
+    mock: { onIdentity: () => new Promise<void>(() => {}) },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  lane.identityChanged();
+
+  const flushed = lane.flush({ timeout: 200 });
+
+  await vi.advanceTimersByTimeAsync(200);
+
+  await expect(flushed).resolves.toEqual({ status: "timeout" });
+  expect(log).toEqual(["open", "identify ada"]);
+});
+
+test("an identity pass the lane discards because consent closed ends the flush's wait for it", async () => {
+  const step = createDeferred<void>();
+
+  const { lane, log, enqueue, setConsentSilently, setIdentity } = createLane({
+    mock: { onIdentity: () => step.promise },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  enqueue("waiting", ADA);
+  setIdentity(ADA_PRO);
+  lane.identityChanged();
+
+  const flushed = lane.flush({ timeout: 1_000 });
+
+  setConsentSilently(false);
+  step.resolve();
+
+  await expect(flushed).resolves.toEqual({ status: "flushed" });
+  expect(log).toEqual(["open", "identify ada", "flush"]);
 });
 
 test("disposal settles the identity step it waits on and leaves no timer behind", () => {

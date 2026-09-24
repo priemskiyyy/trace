@@ -1,11 +1,13 @@
-import type { DestinationOutcome } from "@priemskiyyy/trace";
+import type {
+  DestinationOutcome,
+  TraceDiagnosticType,
+} from "@priemskiyyy/trace";
 
-import type { DiagnosticType } from "src/types/internal/DiagnosticType";
 import type { EventOutcome } from "src/types/internal/EventOutcome";
 import type { RecordedEvent } from "src/types/internal/RecordedEvent";
 
 type OutcomeType = Extract<
-  DiagnosticType,
+  TraceDiagnosticType,
   `event ${DestinationOutcome["status"]}`
 >;
 
@@ -16,6 +18,9 @@ const OUTCOME_STATUSES = {
   "event failed": "failed",
   "event indeterminate": "indeterminate",
 } satisfies Record<OutcomeType, DestinationOutcome["status"]>;
+
+const isOutcomeType = (type: string): type is OutcomeType =>
+  Object.hasOwn(OUTCOME_STATUSES, type);
 
 export const getEventDelivery = (
   events: RecordedEvent[],
@@ -34,18 +39,14 @@ export const getEventDelivery = (
   );
 
   const landed = diagnostics.flatMap((event): EventOutcome[] => {
-    const status = Object.entries(OUTCOME_STATUSES).find(
-      ([type]) => type === event.type,
-    )?.[1];
-
-    if (status === undefined || event.destination === null) {
+    if (!isOutcomeType(event.type) || event.destination === null) {
       return [];
     }
 
     return [
       {
         destination: event.destination.name,
-        status,
+        status: OUTCOME_STATUSES[event.type],
         summary: event.summary,
         losses: event.losses,
       },

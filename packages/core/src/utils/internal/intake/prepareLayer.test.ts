@@ -11,6 +11,14 @@ const POLICY: PrivacyPolicy = {
   limits: DEFAULT_LIMITS,
 };
 
+const isDeepFrozen = (value: unknown): boolean => {
+  if (typeof value !== "object" || value === null) {
+    return true;
+  }
+
+  return Object.isFrozen(value) && Object.values(value).every(isDeepFrozen);
+};
+
 const accepting = (
   accepts: (value: unknown) => boolean,
   transform: (value: unknown) => unknown = (value) => value,
@@ -89,10 +97,10 @@ test("a null is a removal redact is asked about: a key it names is withheld with
   ]);
 });
 
-test("an undefined value, a getter and a non-enumerable key are not given, and no getter runs", () => {
+test("an undefined value and a non-enumerable key are not given, and a getter is an omitted loss that never runs", () => {
   const input: Record<string, unknown> = { plan: undefined, seats: 3 };
 
-  Object.defineProperty(input, "secret", {
+  Object.defineProperty(input, "total", {
     enumerable: true,
     get: () => {
       throw new Error("a getter ran");
@@ -105,8 +113,59 @@ test("an undefined value, a getter and a non-enumerable key are not given, and n
     policy: POLICY,
   });
 
-  expect([...layer]).toEqual([["seats", { value: 3, losses: [] }]]);
+  expect([...layer]).toEqual([
+    ["seats", { value: 3, losses: [] }],
+    [
+      "total",
+      {
+        value: undefined,
+        losses: [{ path: "traits.total", reason: "omitted" }],
+      },
+    ],
+  ]);
+  expect(isDeepFrozen(layer.get("total"))).toBe(true);
   expect(refused).toEqual([]);
+});
+
+test("a getter is asked about like any key: one redact names is a redacted loss, and one the schema does not declare is refused", () => {
+  const input: Record<string, unknown> = {};
+  const { schema } = accepting(() => true);
+
+  for (const key of ["password", "plan", "role"]) {
+    Object.defineProperty(input, key, {
+      enumerable: true,
+      get: () => {
+        throw new Error("a getter ran");
+      },
+    });
+  }
+
+  const { layer, refused } = prepareLayer(input, {
+    root: "traits",
+    policy: POLICY,
+    schema: new Map([
+      ["password", schema],
+      ["plan", schema],
+    ]),
+  });
+
+  expect([...layer]).toEqual([
+    [
+      "password",
+      {
+        value: undefined,
+        losses: [{ path: "traits.password", reason: "redacted" }],
+      },
+    ],
+    [
+      "plan",
+      {
+        value: undefined,
+        losses: [{ path: "traits.plan", reason: "omitted" }],
+      },
+    ],
+  ]);
+  expect(refused).toEqual(["traits.role"]);
 });
 
 test("nothing given is an empty layer, and anything but a plain object is refused under its root", () => {

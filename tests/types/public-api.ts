@@ -29,6 +29,7 @@ import type {
   TraceConsent,
   TraceDiagnosticEvent,
   TraceDiagnostics,
+  TraceDiagnosticType,
   TraceErrorCode,
   TraceEvents,
   TraceFlushResult,
@@ -361,19 +362,46 @@ expectTypeOf<TraceSnapshot>().toEqualTypeOf<{
   destinations: {
     name: string;
     adapter: { name: string };
-    status: DestinationStatus;
+    status: { state: DestinationStatus["state"] };
     buffered: number;
     inFlight: number;
   }[];
 }>();
 expectTypeOf<TraceDiagnosticEvent>().toEqualTypeOf<{
   source: "runtime" | "identity" | "consent" | "event" | "destination";
-  type: string;
+  type: TraceDiagnosticType;
   destination: { name: string } | null;
   event: { id: string } | null;
   timestamp: number;
   context: unknown;
 }>();
+expectTypeOf<TraceDiagnosticType>().toEqualTypeOf<
+  | "trace started"
+  | "trace disposed"
+  | "destination ready"
+  | "destination failed"
+  | "destination disposed"
+  | "destination dispose failed"
+  | "destination collection failed"
+  | "user changed"
+  | "user refused"
+  | "group refused"
+  | "traits refused"
+  | "context refused"
+  | "identity step failed"
+  | "identity step unsupported"
+  | "consent changed"
+  | "event accepted"
+  | "event dropped"
+  | "event submitted"
+  | "event failed"
+  | "event skipped"
+  | "event indeterminate"
+  | "buffer overflow"
+  | "flush started"
+  | "flush completed"
+  | "listener failed"
+>();
 expectTypeOf<TrackedEvent>().toEqualTypeOf<{
   id: string;
   name: string;
@@ -544,7 +572,7 @@ expectTypeOf<MockAdapterOptions>().toEqualTypeOf<{
   onTrack?: (track: MockTrack) => TrackResult | void;
   onIdentity?: (call: MockIdentityCall) => void | Promise<void>;
 }>();
-expectTypeOf<MockIdentityCall>().toEqualTypeOf<
+expectTypeOf<MockIdentityCall>().branded.toEqualTypeOf<
   | { kind: "identify"; user: { id: string } }
   | {
       kind: "traits";

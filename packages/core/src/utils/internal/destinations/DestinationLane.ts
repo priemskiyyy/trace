@@ -20,12 +20,12 @@ import {
   READY_DESTINATION_STATUS,
 } from "src/utils/constants/status";
 import { callIdentityStep } from "src/utils/internal/destinations/callIdentityStep";
-import { copyTrackResult } from "src/utils/internal/destinations/copyTrackResult";
 import { getAnswer } from "src/utils/internal/destinations/getAnswer";
 import { getFlushResult } from "src/utils/internal/destinations/getFlushResult";
 import { getOpenedSession } from "src/utils/internal/destinations/getOpenedSession";
 import { getOutcomeContext } from "src/utils/internal/destinations/getOutcomeContext";
 import { getStepFailure } from "src/utils/internal/destinations/getStepFailure";
+import { getTrackOutcome } from "src/utils/internal/destinations/getTrackOutcome";
 import { LaneBuffer } from "src/utils/internal/destinations/LaneBuffer";
 import { unrefTimer } from "src/utils/internal/destinations/unrefTimer";
 import { planIdentity } from "src/utils/internal/identity/planIdentity";
@@ -58,10 +58,12 @@ type State =
   | { state: "FAILED"; status: DestinationStatus }
   | { state: "DISPOSED"; status: DestinationStatus };
 
+type Deferred = ReturnType<typeof createDeferred<void>>;
+
 type Pending = {
   entry: LaneEntry;
-  handedOff: ReturnType<typeof createDeferred<void>>;
-  done: ReturnType<typeof createDeferred<void>>;
+  handedOff: Deferred;
+  done: Deferred;
 };
 
 type Flight = {
@@ -81,6 +83,8 @@ const DISPOSED: Extract<State, { state: "DISPOSED" }> = Object.freeze({
 });
 
 const STEP_TIMEOUT: StepAnswer = Object.freeze({ kind: "TIMEOUT" });
+
+const STALL_TIMEOUTS = 2;
 
 const NOT_READY: DestinationFlushResult = Object.freeze({
   status: "not-ready",
@@ -110,7 +114,6 @@ export class DestinationLane {
   #options: Options;
   #state = new ValueStore<State>(IDLE);
   #buffer: LaneBuffer<Pending>;
-  #seed: number;
   #current: Pending | null = null;
   #dropping = new Set<Pending>();
   #flights = new Set<Flight>();
@@ -118,17 +121,23 @@ export class DestinationLane {
   #opening = false;
   #retryRequested = false;
   #pumping = false;
-  #passRequested = false;
+  #requestedPass: Deferred | null = null;
+  #runningPass: Deferred | null = null;
   #switching: Promise<void> | null = null;
   #consented = true;
-  #fresh = true;
-  #applied: IdentityTarget | null = null;
+  #applied: IdentityTarget | null;
+  #timeouts = 0;
   #floor = 0;
   #currentGeneration = () => this.#options.currentIdentity().generation;
 
   constructor(options: Options) {
     this.#options = options;
-    this.#seed = options.currentIdentity().generation;
+    this.#applied = {
+      generation: options.currentIdentity().generation,
+      user: null,
+      traits: {},
+      groups: {},
+    };
     this.#buffer = new LaneBuffer({
       capacity: options.buffer.capacity,
       maxAge: options.buffer.maxAge,
@@ -188,6 +197,12 @@ export class DestinationLane {
       done: createDeferred<void>(),
     };
 
+    if (!this.#options.isOpen()) {
+      this.#land(pending, { status: "dropped", reason: "consent" });
+
+      return;
+    }
+
     const current = this.#state.get();
 
     if (current.state === "DISPOSED") {
@@ -223,8 +238,7 @@ export class DestinationLane {
       return;
     }
 
-    this.#passRequested = true;
-    this.#pump();
+    this.#requestPass();
   };
 
   dropBefore = (generation: number) => {
@@ -279,6 +293,13 @@ export class DestinationLane {
       ...Array.from(this.#flights, ({ pending }) => pending),
     ];
 
+    const pass = this.#requestedPass ?? this.#runningPass;
+
+    const handedOff = [
+      ...boundary.map(({ handedOff }) => handedOff.promise),
+      ...(pass === null ? [] : [pass.promise]),
+    ];
+
     const controller = new AbortController();
     const expiry = createDeferred<DestinationFlushResult>();
 
@@ -300,9 +321,7 @@ export class DestinationLane {
     try {
       const waited = await Promise.race([
         expiry.promise,
-        Promise.all(boundary.map(({ handedOff }) => handedOff.promise)).then(
-          () => null,
-        ),
+        Promise.all(handedOff).then(() => null),
       ]);
 
       if (waited !== null) {
@@ -443,14 +462,8 @@ export class DestinationLane {
 
     this.#consented = consented;
     this.#become(opened);
-
-    if (this.#state.get() !== opened) {
-      return;
-    }
-
     this.#syncConsent();
-    this.#passRequested = true;
-    this.#pump();
+    this.#requestPass();
   }
 
   #become(next: Exclude<State, { state: "IDLE" }>) {
@@ -484,9 +497,21 @@ export class DestinationLane {
     }
 
     if (open) {
-      this.#passRequested = true;
-      this.#pump();
+      this.#requestPass();
     }
+  }
+
+  #requestPass() {
+    if (this.#requestedPass === null) {
+      this.#requestedPass = createDeferred<void>();
+    }
+
+    this.#pump();
+  }
+
+  #endPass() {
+    this.#runningPass?.resolve();
+    this.#runningPass = null;
   }
 
   #pump(first: Pending | null = null) {
@@ -504,6 +529,8 @@ export class DestinationLane {
 
     try {
       for (;;) {
+        this.#endPass();
+
         if (this.#switching !== null) {
           await this.#waitForSwitch();
         }
@@ -518,12 +545,13 @@ export class DestinationLane {
 
         next = null;
 
-        if (pending === null && !this.#passRequested) {
+        if (pending === null && this.#requestedPass === null) {
           return;
         }
 
         if (pending === null) {
-          this.#passRequested = false;
+          this.#runningPass = this.#requestedPass;
+          this.#requestedPass = null;
         }
 
         if (!this.#options.isOpen()) {
@@ -542,21 +570,18 @@ export class DestinationLane {
             : pending.entry.identity;
 
         const { steps, next: planned } = planIdentity(
-          this.#fresh
-            ? { generation: this.#seed, user: null, traits: {}, groups: {} }
-            : this.#applied,
+          this.#applied,
           target,
           open.methods,
         );
 
         const event = pending === null ? null : pending.entry.event.id;
+        const stalled = this.#timeouts >= STALL_TIMEOUTS && steps.length > 0;
 
         let done = 0;
-        let failed = false;
+        let failed = stalled;
 
-        this.#fresh = false;
-
-        for (const step of steps) {
+        for (const step of stalled ? [] : steps) {
           if (this.#state.get() !== open) {
             return;
           }
@@ -571,9 +596,13 @@ export class DestinationLane {
 
           const called = this.#call(() => callIdentityStep(open.session, step));
 
+          if (called.kind === "PENDING" && pending !== null) {
+            this.#options.changed();
+          }
+
           const answer =
             called.kind === "PENDING"
-              ? await this.#awaitStep(called.promise, pending)
+              ? await this.#awaitStep(called.promise)
               : called;
 
           if (this.#switching !== null) {
@@ -585,6 +614,12 @@ export class DestinationLane {
           }
 
           const failure = getStepFailure(step, answer);
+
+          this.#timeouts = failure === "timeout" ? this.#timeouts + 1 : 0;
+
+          if (called.kind === "PENDING" && failure === "timeout") {
+            called.promise.then(this.#handleLateAnswer, this.#handleLateAnswer);
+          }
 
           if (failure !== null) {
             this.#record(
@@ -633,14 +668,12 @@ export class DestinationLane {
         this.#handoff(open, pending);
       }
     } finally {
+      this.#endPass();
       this.#pumping = false;
     }
   }
 
-  async #awaitStep(
-    promise: Promise<unknown>,
-    pending: Pending | null,
-  ): Promise<StepAnswer> {
+  async #awaitStep(promise: Promise<unknown>): Promise<StepAnswer> {
     const deadline = createDeferred<StepAnswer>();
 
     const timer = setTimeout(
@@ -656,25 +689,23 @@ export class DestinationLane {
     unrefTimer(timer);
     this.#waits.add(handleDispose);
 
-    const answered = Promise.race([
-      deadline.promise,
-      promise.then(
-        (value): StepAnswer => ({ kind: "RESULT", value }),
-        (error: unknown): StepAnswer => ({ kind: "THREW", error }),
-      ),
-    ]);
-
-    if (pending !== null) {
-      this.#options.changed();
-    }
-
     try {
-      return await answered;
+      return await Promise.race([
+        deadline.promise,
+        promise.then(
+          (value): StepAnswer => ({ kind: "RESULT", value }),
+          (error: unknown): StepAnswer => ({ kind: "THREW", error }),
+        ),
+      ]);
     } finally {
       clearTimeout(timer);
       this.#waits.delete(handleDispose);
     }
   }
+
+  #handleLateAnswer = () => {
+    this.#timeouts = 0;
+  };
 
   #handoff(open: OpenState, pending: Pending) {
     const controller = new AbortController();
@@ -727,7 +758,7 @@ export class DestinationLane {
     if (answer.kind === "RESULT") {
       this.#landFlight(
         flight,
-        copyTrackResult(answer.value, pending.entry.losses),
+        getTrackOutcome(answer.value, pending.entry.losses),
       );
 
       return;
@@ -749,7 +780,7 @@ export class DestinationLane {
 
     this.#landFlight(
       flight,
-      copyTrackResult(answer, flight.pending.entry.losses),
+      getTrackOutcome(answer, flight.pending.entry.losses),
     );
   }
 
@@ -833,49 +864,23 @@ export class DestinationLane {
   }
 
   #switchCollection(session: AnalyticsSession, enabled: boolean) {
-    const answer = this.#call(() => session.collection?.(enabled));
+    const answer = this.#contain(
+      DIAGNOSTIC_TYPES.DESTINATION_COLLECTION_FAILED,
+      { enabled },
+      () => session.collection?.(enabled),
+    );
 
-    if (answer.kind === "THREW") {
-      this.#record(
-        "destination",
-        DIAGNOSTIC_TYPES.DESTINATION_COLLECTION_FAILED,
-        null,
-        { enabled },
-      );
-
+    if (answer.kind !== "PENDING") {
       return;
     }
 
-    if (answer.kind === "PENDING") {
-      const switching = this.#awaitSwitch(answer.promise, enabled).then(() => {
-        if (this.#switching === switching) {
-          this.#switching = null;
-        }
-      });
+    const switching = this.#awaitStep(answer.promise).then(() => {
+      if (this.#switching === switching) {
+        this.#switching = null;
+      }
+    });
 
-      this.#switching = switching;
-
-      return;
-    }
-
-    if (answer.kind === "RESULT") {
-      return;
-    }
-
-    assertUnreachable(answer);
-  }
-
-  async #awaitSwitch(promise: Promise<unknown>, enabled: boolean) {
-    const answer = await this.#awaitStep(promise, null);
-
-    if (answer.kind !== "RESULT" && this.#state.get().state !== "DISPOSED") {
-      this.#record(
-        "destination",
-        DIAGNOSTIC_TYPES.DESTINATION_COLLECTION_FAILED,
-        null,
-        { enabled },
-      );
-    }
+    this.#switching = switching;
   }
 
   async #waitForSwitch() {
@@ -894,28 +899,20 @@ export class DestinationLane {
     type: DiagnosticRecord["type"],
     context: DiagnosticRecord["context"],
     task: () => unknown,
-  ) {
+  ): Answer {
     const answer = this.#call(task);
 
     if (answer.kind === "THREW") {
       this.#record("destination", type, null, context);
-
-      return;
     }
 
     if (answer.kind === "PENDING") {
       answer.promise.catch(() => {
         this.#record("destination", type, null, context);
       });
-
-      return;
     }
 
-    if (answer.kind === "RESULT") {
-      return;
-    }
-
-    assertUnreachable(answer);
+    return answer;
   }
 
   #record(

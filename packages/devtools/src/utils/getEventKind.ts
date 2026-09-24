@@ -1,6 +1,8 @@
-import type { TraceDiagnosticEvent } from "@priemskiyyy/trace";
+import type {
+  TraceDiagnosticEvent,
+  TraceDiagnosticType,
+} from "@priemskiyyy/trace";
 
-import type { DiagnosticType } from "src/types/internal/DiagnosticType";
 import type { RecordedEventKind } from "src/types/internal/RecordedEventKind";
 import { assertUnreachable } from "src/utils/assertUnreachable";
 
@@ -16,6 +18,7 @@ const DIAGNOSTIC_KINDS = {
   "user refused": "ERROR",
   "group refused": "ERROR",
   "traits refused": "ERROR",
+  "context refused": "ERROR",
   "identity step failed": "ERROR",
   "identity step unsupported": null,
   "consent changed": null,
@@ -29,16 +32,12 @@ const DIAGNOSTIC_KINDS = {
   "flush started": null,
   "flush completed": null,
   "listener failed": "ERROR",
-} satisfies Record<DiagnosticType, "ERROR" | null>;
+} satisfies Record<TraceDiagnosticType, "ERROR" | null>;
 
 export const getEventKind = (
   event: Pick<TraceDiagnosticEvent, "source" | "type">,
 ): RecordedEventKind => {
-  const isError = Object.entries(DIAGNOSTIC_KINDS).some(
-    ([type, kind]) => type === event.type && kind === "ERROR",
-  );
-
-  if (isError) {
+  if (DIAGNOSTIC_KINDS[event.type] === "ERROR") {
     return "ERROR";
   }
 

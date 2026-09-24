@@ -1,24 +1,12 @@
 import type { MappingLoss } from "src/types/MappingLoss";
+import { getUniqueLosses } from "src/utils/internal/intake/getUniqueLosses";
 
 export const getCappedLosses = (
   losses: MappingLoss[],
   root: string,
   breadth: number,
 ) => {
-  const seen = new Set<string>();
-
-  const unique = losses.flatMap((loss) => {
-    const identity = `${loss.reason} ${loss.path}`;
-
-    if (seen.has(identity)) {
-      return [];
-    }
-
-    seen.add(identity);
-
-    return [loss];
-  });
-
+  const unique = getUniqueLosses(losses);
   const capped = unique.slice(0, breadth);
 
   const marked = capped.some(

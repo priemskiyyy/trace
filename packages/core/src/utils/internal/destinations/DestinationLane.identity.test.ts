@@ -492,6 +492,237 @@ test.each(
   },
 );
 
+test("after a step and its retry both time out, the lane stalls: each entry that needs a step is skipped at once, and an idle pass calls nothing", async () => {
+  vi.useFakeTimers();
+
+  const ids = ["e1", "e2", "e3", "e4", "e5", "e6", "e7", "e8"];
+
+  const { lane, log, enqueue, outcomes, records, setIdentity } = createLane({
+    timeout: 1_000,
+    mock: { onIdentity: () => new Promise<void>(() => {}) },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  lane.identityChanged();
+
+  for (const id of ids) {
+    enqueue(id, ADA);
+  }
+
+  await vi.advanceTimersByTimeAsync(1_999);
+
+  expect(ids.map((id) => outcomes.get(id))).toEqual(ids.map(() => []));
+
+  await vi.advanceTimersByTimeAsync(1);
+  lane.identityChanged();
+
+  expect(ids.map((id) => outcomes.get(id))).toEqual(
+    ids.map(() => [IDENTITY_FAILED]),
+  );
+  expect(log).toEqual(["open", "identify ada", "reset"]);
+  expect(records.filter((record) => record.source === "identity")).toEqual([
+    {
+      source: "identity",
+      type: "identity step failed",
+      destination: "product",
+      event: null,
+      context: { step: "identify", reason: "timeout" },
+    },
+    {
+      source: "identity",
+      type: "identity step failed",
+      destination: "product",
+      event: "e1",
+      context: { step: "reset", reason: "timeout" },
+    },
+  ]);
+});
+
+test("a stalled lane plans again once a timed-out step answers late, and the next entry is delivered", async () => {
+  vi.useFakeTimers();
+
+  const late = createDeferred<void>();
+
+  let calls = 0;
+
+  const { lane, log, enqueue, outcomes, setIdentity } = createLane({
+    timeout: 1_000,
+    mock: {
+      onIdentity: () => {
+        calls += 1;
+
+        if (calls === 1) {
+          return late.promise;
+        }
+
+        if (calls === 2) {
+          return new Promise<void>(() => {});
+        }
+      },
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  lane.identityChanged();
+  enqueue("first", ADA);
+  await vi.advanceTimersByTimeAsync(2_000);
+  enqueue("stalled", ADA);
+
+  expect(outcomes.get("stalled")).toEqual([IDENTITY_FAILED]);
+
+  late.resolve();
+  await vi.advanceTimersByTimeAsync(0);
+  enqueue("delivered", ADA);
+
+  expect(outcomes.get("delivered")).toEqual([SUBMITTED]);
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "reset",
+    "reset",
+    "identify ada",
+    "track delivered",
+  ]);
+});
+
+test("a timed-out step that rejects late also ends the stall", async () => {
+  vi.useFakeTimers();
+
+  const late = createDeferred<void>();
+
+  let calls = 0;
+
+  const { lane, log, enqueue, outcomes, records, setIdentity } = createLane({
+    timeout: 1_000,
+    mock: {
+      onIdentity: () => {
+        calls += 1;
+
+        if (calls === 1) {
+          return late.promise;
+        }
+
+        if (calls === 2) {
+          return new Promise<void>(() => {});
+        }
+      },
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  lane.identityChanged();
+  enqueue("first", ADA);
+  await vi.advanceTimersByTimeAsync(2_000);
+  late.reject(new Error("the SDK failed late"));
+  await vi.advanceTimersByTimeAsync(0);
+  enqueue("delivered", ADA);
+
+  expect(outcomes.get("delivered")).toEqual([SUBMITTED]);
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "reset",
+    "reset",
+    "identify ada",
+    "track delivered",
+  ]);
+  expect(
+    records.filter((record) => record.type === "identity step failed"),
+  ).toHaveLength(2);
+});
+
+test("a step that answers late ends a stall and calls nothing until the next entry or identity change", async () => {
+  vi.useFakeTimers();
+
+  const late = createDeferred<void>();
+
+  let calls = 0;
+
+  const { lane, log, enqueue, setIdentity } = createLane({
+    timeout: 1_000,
+    mock: {
+      onIdentity: () => {
+        calls += 1;
+
+        if (calls === 1) {
+          return late.promise;
+        }
+
+        if (calls === 2) {
+          return new Promise<void>(() => {});
+        }
+      },
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  lane.identityChanged();
+  enqueue("first", ADA);
+  await vi.advanceTimersByTimeAsync(2_000);
+  late.resolve();
+  await vi.advanceTimersByTimeAsync(10_000);
+
+  expect(log).toEqual(["open", "identify ada", "reset"]);
+
+  lane.identityChanged();
+
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "reset",
+    "reset",
+    "identify ada",
+  ]);
+});
+
+test("an answered step resets the count, so two timeouts with an answer between them never stall the lane", async () => {
+  vi.useFakeTimers();
+
+  let calls = 0;
+
+  const { lane, log, enqueue, outcomes, setIdentity } = createLane({
+    timeout: 1_000,
+    mock: {
+      onIdentity: () => {
+        calls += 1;
+
+        if (calls === 1 || calls === 4) {
+          return new Promise<void>(() => {});
+        }
+      },
+    },
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  enqueue("first", ADA);
+  enqueue("second", ADA);
+  await vi.advanceTimersByTimeAsync(1_000);
+  setIdentity(BOB);
+  enqueue("third", BOB);
+  enqueue("fourth", BOB);
+  await vi.advanceTimersByTimeAsync(1_000);
+
+  expect(
+    ["first", "second", "third", "fourth"].map((id) => outcomes.get(id)),
+  ).toEqual([[IDENTITY_FAILED], [SUBMITTED], [IDENTITY_FAILED], [SUBMITTED]]);
+  expect(log).toEqual([
+    "open",
+    "identify ada",
+    "reset",
+    "identify ada",
+    "track second",
+    "reset",
+    "reset",
+    "identify bob",
+    "track fourth",
+  ]);
+});
+
 test("an identity change with nothing queued is applied at once by an idle pass", () => {
   const { lane, log, setIdentity } = createLane();
 

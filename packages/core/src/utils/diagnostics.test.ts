@@ -81,6 +81,31 @@ test("the snapshot holds the status, the identity, consent, pending receipts and
   });
 });
 
+test("a failed destination's snapshot status is its state alone, while its handle keeps the error", () => {
+  const failure = new Error("apiKey=secret was refused");
+
+  const trace = new Trace({
+    events,
+    destinations: {
+      product: createMockAdapter({
+        onOpen: () => {
+          throw failure;
+        },
+      }).adapter,
+    },
+  });
+
+  trace.start();
+
+  expect(trace.diagnostics.get().destinations[0]?.status).toEqual({
+    state: "failed",
+  });
+  expect(trace.destination("product").status.get()).toEqual({
+    state: "failed",
+    error: failure,
+  });
+});
+
 test("the snapshot is frozen, kept until something changes, and cannot be rewritten by an observer", () => {
   const trace = new Trace({
     events,
@@ -201,6 +226,53 @@ test("each record carries its source, its destination, its event and plain data 
       timestamp: 1_000,
       context: { name: "App Opened", reason: "not-routed" },
     },
+  ]);
+  expect(recorded.every(isDeepFrozen)).toBe(true);
+});
+
+test("every list and object a record carries is frozen where the core makes it, so each published event is frozen through and through", () => {
+  const trace = new Trace({
+    events,
+    destinations: { product: createMockAdapter().adapter },
+    consent: { product: ["analytics"] },
+  });
+
+  const recorded: TraceDiagnosticEvent[] = [];
+
+  trace.diagnostics.events.subscribe((diagnostic) => recorded.push(diagnostic));
+  trace.start();
+  // @ts-expect-error An untyped caller named a purpose the consent option does not declare.
+  trace.consent.set({ analytics: "granted", marketing: "granted" });
+  trace.user({ id: "ada" });
+  // @ts-expect-error A JavaScript caller can pass a context that is not an object.
+  trace.track("App Opened", undefined, { context: "home" });
+
+  expect(
+    recorded.flatMap(({ type, context }) => {
+      if (
+        type !== "consent changed" &&
+        type !== "user changed" &&
+        type !== "event accepted"
+      ) {
+        return [];
+      }
+
+      return [[type, context]];
+    }),
+  ).toEqual([
+    [
+      "consent changed",
+      { decisions: { analytics: "granted" }, refused: ["marketing"] },
+    ],
+    ["user changed", { generation: 1, user: { id: "ada" } }],
+    [
+      "event accepted",
+      {
+        name: "App Opened",
+        destinations: ["product"],
+        losses: [{ path: "context", reason: "invalid" }],
+      },
+    ],
   ]);
   expect(recorded.every(isDeepFrozen)).toBe(true);
 });

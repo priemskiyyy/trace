@@ -1,4 +1,3 @@
-import type { ObservableValue } from "src/types/ObservableValue";
 import { isolate } from "src/utils/common/isolate";
 
 export class ValueStore<TValue> {
@@ -39,10 +38,5 @@ export class ValueStore<TValue> {
     return () => {
       this.#listeners.delete(subscription);
     };
-  };
-
-  observable: ObservableValue<TValue> = {
-    get: this.get,
-    subscribe: this.subscribe,
   };
 }

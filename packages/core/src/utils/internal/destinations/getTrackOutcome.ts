@@ -2,6 +2,7 @@ import type { DestinationOutcome } from "src/types/DestinationOutcome";
 import type { MappingLoss } from "src/types/MappingLoss";
 import type { TrackEvidence } from "src/types/TrackEvidence";
 import type { TrackResult } from "src/types/TrackResult";
+import { getUniqueLosses } from "src/utils/internal/intake/getUniqueLosses";
 import { TraceError } from "src/utils/TraceError";
 
 type SkipReason = Extract<TrackResult, { status: "skipped" }>["reason"];
@@ -72,7 +73,7 @@ const getLosses = (eventLosses: MappingLoss[], adapterLosses: unknown) => {
   }
 
   const reported: unknown[] = adapterLosses ?? [];
-  const losses = [...eventLosses, ...reported].map(copyLoss);
+  const losses = getUniqueLosses([...eventLosses, ...reported].map(copyLoss));
 
   Object.freeze(losses);
 
@@ -97,7 +98,7 @@ const copyEventReference = (value: unknown) => {
   return Object.freeze({ id });
 };
 
-const getTrackOutcome = (
+const readTrackOutcome = (
   answer: unknown,
   eventLosses: MappingLoss[],
 ): DestinationOutcome => {
@@ -161,12 +162,12 @@ const getTrackOutcome = (
   throw createInvalidAnswer();
 };
 
-export const copyTrackResult = (
+export const getTrackOutcome = (
   answer: unknown,
   eventLosses: MappingLoss[],
 ): DestinationOutcome => {
   try {
-    return getTrackOutcome(answer, eventLosses);
+    return readTrackOutcome(answer, eventLosses);
   } catch (error) {
     return Object.freeze({ status: "failed", error });
   }

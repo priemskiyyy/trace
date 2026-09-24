@@ -107,37 +107,6 @@ test("a destination is open while every purpose it needs is granted, and closed 
   expect(getRoute(trace.track("App Opened"))).toBe("consent");
 });
 
-test("a destination whose purposes are not a list, or whose purposes throw when read, stays closed", () => {
-  const consent = {
-    product: "analytics",
-    get research(): string[] {
-      throw new Error("unreadable purposes");
-    },
-  };
-
-  const trace: Trace<
-    typeof events,
-    {
-      product: AnalyticsAdapter<MockSession>;
-      research: AnalyticsAdapter<MockSession>;
-    }
-  > = new Trace({
-    events,
-    destinations: {
-      product: createMockAdapter().adapter,
-      research: createMockAdapter().adapter,
-    },
-    // @ts-expect-error A JavaScript caller can give purposes that are not a list, or cannot be read.
-    consent,
-  });
-
-  trace.start();
-  trace.consent.set({ analytics: "granted" });
-
-  expect(trace.consent.get()).toEqual({});
-  expect(getRoute(trace.track("App Opened"))).toBe("consent");
-});
-
 test("a destination the consent option does not name is never gated and never receives collection", () => {
   const research = createLogged();
 

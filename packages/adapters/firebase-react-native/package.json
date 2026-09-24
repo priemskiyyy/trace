@@ -1,0 +1,62 @@
+{
+  "name": "@priemskiyyy/trace-firebase-react-native",
+  "version": "0.1.0",
+  "description": "Firebase Analytics destination for Trace on React Native: each event is the GA4 event your typed map builds, checked against Google's rules, over the React Native Firebase analytics you inject.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priemskiyyy/trace.git",
+    "directory": "packages/adapters/firebase-react-native"
+  },
+  "bugs": {
+    "url": "https://github.com/priemskiyyy/trace/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint:typescript": "tsc --noEmit -p .",
+    "lint:eslint": "eslint src",
+    "test:unit": "vitest run --root ../../.. --project firebase-react-native"
+  },
+  "peerDependencies": {
+    "@priemskiyyy/trace": ">=0.1.0 <0.2",
+    "@react-native-firebase/analytics": ">=26.4.0 <27"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-firebase/analytics": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@priemskiyyy/trace": "workspace:*"
+  },
+  "keywords": [
+    "firebase",
+    "google-analytics",
+    "ga4",
+    "product-analytics",
+    "react-native",
+    "typescript",
+    "trace",
+    "adapter"
+  ],
+  "homepage": "https://priemskiyyy.github.io/trace/"
+}

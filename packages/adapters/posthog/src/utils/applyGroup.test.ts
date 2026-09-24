@@ -130,38 +130,68 @@ test("a group whose every trait posthog-js would cut still joins, without proper
   );
 });
 
-test("a membership whose type or key posthog-js would cut is left out whole, and the change is reported unsupported", () => {
+test("a group type posthog-js would cut is refused before any call, since it can never have been registered, while a type and key of the limit's length join", () => {
   const fake = fakePostHog({ config: { properties_string_max_length: 8 } });
 
-  const refusal = new TraceError({
-    code: "UNSUPPORTED",
-    message:
-      "posthog-js would cut this group's type or key past properties_string_max_length, so the membership was left out.",
-  });
-
-  expect(
-    getThrown(() =>
-      applyGroup(fake.sdk, {
-        user: null,
-        group: { type: "workspace", id: "w_1", traits: { plan: "team" } },
-      }),
-    ),
-  ).toStrictEqual(refusal);
-  expect(
-    getThrown(() =>
-      applyGroup(fake.sdk, {
-        user: null,
-        group: { type: "team", id: "abcdefghi", traits: {} },
-      }),
-    ),
-  ).toStrictEqual(refusal);
+  const thrown = getThrown(() =>
+    applyGroup(fake.sdk, {
+      user: null,
+      group: { type: "workspace", id: "w_1", traits: { plan: "team" } },
+    }),
+  );
 
   applyGroup(fake.sdk, {
     user: null,
     group: { type: "projects", id: "abcdefgh", traits: {} },
   });
 
+  expect(thrown).toStrictEqual(
+    new TraceError({
+      code: "UNSUPPORTED",
+      message:
+        "posthog-js would cut this group type past properties_string_max_length, so the membership was left out.",
+    }),
+  );
+  expect(fake.calls.register).toStrictEqual([]);
   expect(fake.calls.group).toStrictEqual([
     { type: "projects", key: "abcdefgh", properties: undefined },
   ]);
+});
+
+test("a group key posthog-js would cut leaves the group of that type before the change is reported unsupported, so the next event carries no membership the user left", () => {
+  const fake = fakePostHog({ config: { properties_string_max_length: 8 } });
+
+  applyGroup(fake.sdk, {
+    user: null,
+    group: { type: "company", id: "c_1", traits: {} },
+  });
+  applyGroup(fake.sdk, {
+    user: null,
+    group: { type: "project", id: "p_1", traits: {} },
+  });
+
+  const thrown = getThrown(() =>
+    applyGroup(fake.sdk, {
+      user: null,
+      group: { type: "company", id: "abcdefghi", traits: { plan: "team" } },
+    }),
+  );
+
+  fake.sdk.capture("Note Added");
+
+  expect(fake.calls.group).toStrictEqual([
+    { type: "company", key: "c_1", properties: undefined },
+    { type: "project", key: "p_1", properties: undefined },
+  ]);
+  expect(fake.calls.register).toStrictEqual([{ $groups: { project: "p_1" } }]);
+  expect(
+    fake.captured.map(({ properties }) => properties.$groups),
+  ).toStrictEqual([{ project: "p_1" }]);
+  expect(thrown).toStrictEqual(
+    new TraceError({
+      code: "UNSUPPORTED",
+      message:
+        "posthog-js would cut this group key past properties_string_max_length, so the membership was left out and the user left any group of this type.",
+    }),
+  );
 });

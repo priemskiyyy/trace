@@ -11,8 +11,8 @@ export const applyGroup = (
 ) => {
   assertPersonProfiles(sdk);
 
-  if (id === null) {
-    // posthog-js has no call that leaves one group type, and register replaces $groups whole.
+  // posthog-js has no call that leaves one group type, and register replaces $groups whole.
+  const leave = () => {
     sdk.register({
       $groups: Object.fromEntries(
         Object.entries(sdk.getGroups()).flatMap(
@@ -26,17 +26,31 @@ export const applyGroup = (
         ),
       ),
     });
+  };
+
+  if (id === null) {
+    leave();
 
     return;
   }
 
   const maxLength = sdk.config.properties_string_max_length;
 
-  if (type.length > maxLength || id.length > maxLength) {
+  if (type.length > maxLength) {
     throw new TraceError({
       code: "UNSUPPORTED",
       message:
-        "posthog-js would cut this group's type or key past properties_string_max_length, so the membership was left out.",
+        "posthog-js would cut this group type past properties_string_max_length, so the membership was left out.",
+    });
+  }
+
+  if (id.length > maxLength) {
+    leave();
+
+    throw new TraceError({
+      code: "UNSUPPORTED",
+      message:
+        "posthog-js would cut this group key past properties_string_max_length, so the membership was left out and the user left any group of this type.",
     });
   }
 

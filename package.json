@@ -9,15 +9,25 @@
   "scripts": {
     "build": "pnpm -r --filter './packages/**' build",
     "dev": "pnpm --filter example-react dev",
+    "dev:docs": "vitepress dev docs",
+    "dev:server": "pnpm --filter example-server dev",
     "format": "prettier --write .",
     "lint:prettier": "prettier --check .",
     "lint:typescript": "tsc --noEmit && pnpm -r lint:typescript",
     "lint:eslint": "eslint .",
-    "test:lint": "node scripts/verify-lint-rules.mjs",
+    "lint:docs": "tsc --noEmit -p docs/tsconfig.json",
+    "test:lint": "node scripts/verify-lint-rules.mjs && node scripts/verify-no-any.mjs",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:examples": "pnpm build && playwright test -c examples/playwright.config.ts",
-    "check": "pnpm build && pnpm lint:typescript && pnpm lint:eslint && pnpm test:lint && pnpm lint:prettier && pnpm test:unit"
+    "test:package": "node scripts/verify-packages.mjs",
+    "test:mutation": "node scripts/mutate.mjs",
+    "build:docs": "vitepress build docs && node scripts/build-demo.mjs",
+    "verify:docs": "node scripts/verify-docs.mjs",
+    "verify:snippets": "node scripts/verify-snippets.mjs",
+    "verify:release": "node scripts/verify-release.mjs",
+    "check": "pnpm build && pnpm lint:typescript && pnpm lint:eslint && pnpm test:lint && pnpm lint:prettier && pnpm test:unit",
+    "check:release": "pnpm check && pnpm lint:docs && pnpm build:docs && pnpm verify:docs && pnpm verify:snippets && pnpm test:package && pnpm verify:release && pnpm -r --if-present --filter './examples/*' build && pnpm test:mutation"
   },
   "devDependencies": {
     "@amplitude/analytics-browser": "2.45.10",

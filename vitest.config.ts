@@ -35,9 +35,15 @@ const project = (
 
 const adapters = new URL("./packages/adapters/", import.meta.url);
 
-const adapterProjects = (existsSync(adapters) ? readdirSync(adapters) : [])
-  .filter((name) => existsSync(new URL(`${name}/package.json`, adapters)))
-  .map((name) => project("packages/adapters", name));
+const adapterProjects = (
+  existsSync(adapters) ? readdirSync(adapters) : []
+).flatMap((name) => {
+  if (!existsSync(new URL(`${name}/package.json`, adapters))) {
+    return [];
+  }
+
+  return [project("packages/adapters", name)];
+});
 
 const bindings: Record<string, TestProjectConfiguration[]> = {
   react: [

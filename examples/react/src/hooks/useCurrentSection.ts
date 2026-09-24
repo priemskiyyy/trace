@@ -6,8 +6,7 @@ import { SECTION_IDS } from "src/utils/constants/sections";
 const isSectionId = (id: string): id is SectionId =>
   SECTION_IDS.some((sectionId) => sectionId === id);
 
-// At the bottom of the page the last section is current, even when it is
-// too short to reach the band the observer watches.
+// At the bottom of the page the last section is current, even one too short to reach the watched band.
 const pickSection = (crossing: Set<SectionId>) => {
   const atBottom =
     window.innerHeight + window.scrollY >=

@@ -3,6 +3,15 @@ import type { Page } from "@playwright/test";
 
 const WIDTHS = [375, 1280];
 
+const DESTINATIONS = [
+  "Amplitude",
+  "PostHog",
+  "Mixpanel",
+  "Google Analytics",
+  "Segment",
+  "Your API",
+];
+
 const open = async (page: Page, width: number) => {
   const errors: string[] = [];
 
@@ -59,6 +68,30 @@ for (const width of WIDTHS) {
     expect(errors).toEqual([]);
   });
 }
+
+test("with Segment started and consent granted, checking out reaches every destination with the same accepted event", async ({
+  page,
+}) => {
+  const errors = await open(page, 1280);
+
+  await page.getByRole("button", { name: "Segment not initialized" }).click();
+  await page.getByRole("button", { name: "Retry start" }).click();
+  await page.getByRole("button", { name: "Accept" }).click();
+  await addToCart(page, "Suede Boots");
+  await page.getByRole("button", { name: "Check out" }).click();
+
+  const receipt = latestReceipt(page);
+
+  await expect(receipt.getByText("Settled")).toBeVisible();
+
+  for (const destination of DESTINATIONS) {
+    await expect(
+      receipt.getByRole("listitem", { name: destination }),
+    ).toContainText("Submitted");
+  }
+
+  expect(errors).toEqual([]);
+});
 
 test("switching accounts keeps each event under its own account", async ({
   page,

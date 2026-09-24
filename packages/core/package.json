@@ -1,0 +1,73 @@
+{
+  "name": "@priemskiyyy/trace",
+  "version": "0.1.0",
+  "description": "Typed, provider-independent product analytics for TypeScript: events declared once, identity that stays right while providers start, consent that gates delivery, and receipts that say what happened.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priemskiyyy/trace.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/priemskiyyy/trace/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./mock": {
+      "types": "./dist/mock.d.ts",
+      "import": "./dist/mock.js",
+      "default": "./dist/mock.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "default": "./dist/testing.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint:typescript": "tsc --noEmit -p .",
+    "lint:eslint": "eslint src",
+    "test:unit": "vitest run --root ../.. --project core"
+  },
+  "keywords": [
+    "analytics",
+    "product-analytics",
+    "event-tracking",
+    "amplitude",
+    "posthog",
+    "firebase-analytics",
+    "ampli",
+    "consent",
+    "redaction",
+    "typescript",
+    "trace",
+    "react-native",
+    "expo"
+  ],
+  "homepage": "https://priemskiyyy.github.io/trace/",
+  "peerDependencies": {
+    "vitest": ">=4.0.0 <5"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
+  }
+}

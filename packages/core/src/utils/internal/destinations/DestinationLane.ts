@@ -119,6 +119,7 @@ export class DestinationLane {
   #retryRequested = false;
   #pumping = false;
   #passRequested = false;
+  #switching: Promise<void> | null = null;
   #consented = true;
   #fresh = true;
   #applied: IdentityTarget | null = null;
@@ -204,6 +205,7 @@ export class DestinationLane {
     if (
       current.state === "OPEN" &&
       !this.#pumping &&
+      this.#switching === null &&
       this.#buffer.size() === 0
     ) {
       this.#pump(pending);
@@ -502,6 +504,10 @@ export class DestinationLane {
 
     try {
       for (;;) {
+        if (this.#switching !== null) {
+          await this.#waitForSwitch();
+        }
+
         const open = this.#state.get();
 
         if (open.state !== "OPEN") {
@@ -569,6 +575,10 @@ export class DestinationLane {
             called.kind === "PENDING"
               ? await this.#awaitStep(called.promise, pending)
               : called;
+
+          if (this.#switching !== null) {
+            await this.#waitForSwitch();
+          }
 
           if (this.#state.get() !== open) {
             return;
@@ -823,11 +833,55 @@ export class DestinationLane {
   }
 
   #switchCollection(session: AnalyticsSession, enabled: boolean) {
-    this.#contain(
-      DIAGNOSTIC_TYPES.DESTINATION_COLLECTION_FAILED,
-      { enabled },
-      () => session.collection?.(enabled),
-    );
+    const answer = this.#call(() => session.collection?.(enabled));
+
+    if (answer.kind === "THREW") {
+      this.#record(
+        "destination",
+        DIAGNOSTIC_TYPES.DESTINATION_COLLECTION_FAILED,
+        null,
+        { enabled },
+      );
+
+      return;
+    }
+
+    if (answer.kind === "PENDING") {
+      const switching = this.#awaitSwitch(answer.promise, enabled).then(() => {
+        if (this.#switching === switching) {
+          this.#switching = null;
+        }
+      });
+
+      this.#switching = switching;
+
+      return;
+    }
+
+    if (answer.kind === "RESULT") {
+      return;
+    }
+
+    assertUnreachable(answer);
+  }
+
+  async #awaitSwitch(promise: Promise<unknown>, enabled: boolean) {
+    const answer = await this.#awaitStep(promise, null);
+
+    if (answer.kind !== "RESULT" && this.#state.get().state !== "DISPOSED") {
+      this.#record(
+        "destination",
+        DIAGNOSTIC_TYPES.DESTINATION_COLLECTION_FAILED,
+        null,
+        { enabled },
+      );
+    }
+  }
+
+  async #waitForSwitch() {
+    while (this.#switching !== null) {
+      await this.#switching;
+    }
   }
 
   #release(session: AnalyticsSession) {

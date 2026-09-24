@@ -1,13 +1,32 @@
-import { expect, test, vi } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { createMockAdapter } from "src/mock/createMockAdapter";
+import type { MockAdapterOptions } from "src/mock/types/MockAdapterOptions";
 import type { AnalyticsAdapter } from "src/types/AnalyticsAdapter";
 import type { DestinationOutcome } from "src/types/DestinationOutcome";
 import type { IdentityTarget } from "src/types/internal/IdentityTarget";
 import { createDeferred } from "src/utils/common/createDeferred";
 import { createLane } from "src/utils/internal/destinations/createLane.fixture";
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 const nextMacrotask = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+const withCollection = (
+  collection: (enabled: boolean) => Promise<void> | undefined,
+  options: MockAdapterOptions = {},
+) => {
+  const mock = createMockAdapter(options);
+
+  const adapter: AnalyticsAdapter = {
+    name: "switching",
+    open: () => ({ ...mock.adapter.open(), collection }),
+  };
+
+  return { mock, adapter };
+};
 
 const ADA: IdentityTarget = {
   generation: 1,
@@ -334,4 +353,283 @@ test("a collection switch that throws or rejects is contained, and consent still
     },
   ]);
   expect(JSON.stringify(records)).not.toContain("the SDK cannot");
+});
+
+test("a collection switch that answers a promise holds the identity pass and the handoff until it settles", async () => {
+  const granting = createDeferred<void>();
+
+  const { mock, adapter } = withCollection((enabled) =>
+    enabled ? granting.promise : undefined,
+  );
+
+  const { lane, log, enqueue, landed, setConsent, setIdentity } = createLane({
+    adapter,
+    gated: true,
+    consent: false,
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  setConsent(true);
+  enqueue("after", ADA);
+  await nextMacrotask();
+
+  expect(log).toEqual(["open", "collection false", "collection true"]);
+  expect(mock.sessions[0]?.identity).toEqual([]);
+  expect(lane.buffered()).toBe(1);
+
+  granting.resolve();
+
+  expect(await landed("after")).toEqual(SUBMITTED);
+  expect(log).toEqual([
+    "open",
+    "collection false",
+    "collection true",
+    "identify ada",
+    "track after",
+  ]);
+});
+
+test("a collection switch that rejects is recorded as destination collection failed, and then the lane plans and delivers", async () => {
+  const granting = createDeferred<void>();
+
+  const { adapter } = withCollection((enabled) =>
+    enabled ? granting.promise : undefined,
+  );
+
+  const { lane, log, records, enqueue, landed, setConsent, setIdentity } =
+    createLane({ adapter, gated: true, consent: false });
+
+  lane.start();
+  setIdentity(ADA);
+  setConsent(true);
+  enqueue("after", ADA);
+  await nextMacrotask();
+
+  expect(log).toEqual(["open", "collection false", "collection true"]);
+
+  granting.reject(new Error("the SDK cannot resume"));
+
+  expect(await landed("after")).toEqual(SUBMITTED);
+  expect(log).toEqual([
+    "open",
+    "collection false",
+    "collection true",
+    "identify ada",
+    "track after",
+  ]);
+  expect(
+    records.filter((record) => record.type === "destination collection failed"),
+  ).toStrictEqual([
+    {
+      source: "destination",
+      type: "destination collection failed",
+      destination: "product",
+      event: null,
+      context: { enabled: true },
+    },
+  ]);
+  expect(JSON.stringify(records)).not.toContain("the SDK cannot resume");
+});
+
+test("a collection switch that never settles is released at the lane's timeout, as destination collection failed", async () => {
+  vi.useFakeTimers();
+
+  const { adapter } = withCollection((enabled) =>
+    enabled ? new Promise<void>(() => {}) : undefined,
+  );
+
+  const { lane, log, records, enqueue, landed, setConsent, setIdentity } =
+    createLane({ adapter, gated: true, consent: false, timeout: 1_000 });
+
+  lane.start();
+  setIdentity(ADA);
+  setConsent(true);
+  enqueue("after", ADA);
+  await vi.advanceTimersByTimeAsync(999);
+
+  expect(log).toEqual(["open", "collection false", "collection true"]);
+
+  await vi.advanceTimersByTimeAsync(1);
+
+  expect(await landed("after")).toEqual(SUBMITTED);
+  expect(log).toEqual([
+    "open",
+    "collection false",
+    "collection true",
+    "identify ada",
+    "track after",
+  ]);
+  expect(
+    records.filter((record) => record.type === "destination collection failed"),
+  ).toStrictEqual([
+    {
+      source: "destination",
+      type: "destination collection failed",
+      destination: "product",
+      event: null,
+      context: { enabled: true },
+    },
+  ]);
+});
+
+test("a revocation while a grant's switch is held leaves nothing planned or handed off", async () => {
+  const granting = createDeferred<void>();
+
+  const { mock, adapter } = withCollection((enabled) =>
+    enabled ? granting.promise : undefined,
+  );
+
+  const { lane, log, enqueue, outcomes, setConsent, setIdentity } = createLane({
+    adapter,
+    gated: true,
+    consent: false,
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  setConsent(true);
+  enqueue("after", ADA);
+  setConsent(false);
+  granting.resolve();
+  await nextMacrotask();
+
+  expect(outcomes.get("after")).toEqual([CONSENT]);
+  expect(mock.sessions[0]?.identity).toEqual([]);
+  expect(log).toEqual([
+    "open",
+    "collection false",
+    "collection true",
+    "collection false",
+  ]);
+});
+
+test("a collection switch made while an identity step is in flight holds the steps and the handoff after it", async () => {
+  const step = createDeferred<void>();
+  const granting = createDeferred<void>();
+
+  let grants = 0;
+
+  const { adapter } = withCollection(
+    (enabled) => {
+      if (!enabled) {
+        return undefined;
+      }
+
+      grants += 1;
+
+      return grants === 1 ? undefined : granting.promise;
+    },
+    {
+      onIdentity: (call) =>
+        call.kind === "identify" ? step.promise : undefined,
+    },
+  );
+
+  const { lane, log, enqueue, landed, setConsent, setIdentity } = createLane({
+    adapter,
+    gated: true,
+  });
+
+  lane.start();
+  setIdentity(ADA_PRO);
+  lane.identityChanged();
+  setConsent(false);
+  setConsent(true);
+  enqueue("after", ADA_PRO);
+  step.resolve();
+  await nextMacrotask();
+
+  expect(log).toEqual([
+    "open",
+    "collection true",
+    "identify ada",
+    "collection false",
+    "collection true",
+  ]);
+
+  granting.resolve();
+
+  expect(await landed("after")).toEqual(SUBMITTED);
+  expect(log.slice(5)).toEqual(["traits", "track after"]);
+});
+
+test("an event that reaches the lane while a revocation's switch is held waits in the buffer, so disposing lands it", async () => {
+  const closing = createDeferred<void>();
+
+  const { adapter } = withCollection((enabled) =>
+    enabled ? undefined : closing.promise,
+  );
+
+  const { lane, log, records, enqueue, outcomes, setConsent } = createLane({
+    adapter,
+    gated: true,
+  });
+
+  lane.start();
+  setConsent(false);
+  enqueue("unexpected", ADA);
+
+  expect(lane.buffered()).toBe(1);
+
+  lane.dispose();
+  await nextMacrotask();
+
+  expect(outcomes.get("unexpected")).toEqual([
+    { status: "dropped", reason: "disposed" },
+  ]);
+  expect(log).toEqual([
+    "open",
+    "collection true",
+    "collection false",
+    "dispose",
+  ]);
+  expect(records.map(({ type }) => type)).not.toContain(
+    "destination collection failed",
+  );
+});
+
+test("the lane waits for the latest switch when consent flips again while one is held", async () => {
+  const first = createDeferred<void>();
+  const second = createDeferred<void>();
+
+  let grants = 0;
+
+  const { adapter } = withCollection((enabled) => {
+    if (!enabled) {
+      return undefined;
+    }
+
+    grants += 1;
+
+    return grants === 1 ? first.promise : second.promise;
+  });
+
+  const { lane, log, enqueue, landed, setConsent, setIdentity } = createLane({
+    adapter,
+    gated: true,
+    consent: false,
+  });
+
+  lane.start();
+  setIdentity(ADA);
+  setConsent(true);
+  setConsent(false);
+  setConsent(true);
+  enqueue("after", ADA);
+  first.resolve();
+  await nextMacrotask();
+
+  expect(log).toEqual([
+    "open",
+    "collection false",
+    "collection true",
+    "collection false",
+    "collection true",
+  ]);
+
+  second.resolve();
+
+  expect(await landed("after")).toEqual(SUBMITTED);
+  expect(log.slice(5)).toEqual(["identify ada", "track after"]);
 });

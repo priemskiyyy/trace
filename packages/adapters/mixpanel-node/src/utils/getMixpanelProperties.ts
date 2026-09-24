@@ -4,6 +4,7 @@ import {
   MAX_NAME_LENGTH,
   MAX_PROPERTIES,
   MAX_PROPERTY_SIZE,
+  MAX_STRING_LENGTH,
 } from "src/utils/constants/limits";
 import { getMixpanelValue } from "src/utils/getMixpanelValue";
 import { getSentSize } from "src/utils/getSentSize";
@@ -34,6 +35,7 @@ export const getMixpanelProperties = (
       value,
       path: `properties.${key}`,
       isShadowed: Object.hasOwn(identity.groups, key),
+      isGroup: false,
     })),
     ...Object.entries(context).map(([key, value]) => ({
       key,
@@ -41,18 +43,30 @@ export const getMixpanelProperties = (
       path: `context.${key}`,
       isShadowed:
         Object.hasOwn(properties, key) || Object.hasOwn(identity.groups, key),
+      isGroup: false,
     })),
     ...Object.entries(identity.groups).map(([type, group]) => ({
       key: type,
       value: group.id,
       path: `identity.groups.${type}`,
       isShadowed: false,
+      isGroup: true,
     })),
   ];
 
-  for (const { key, value, path, isShadowed } of entries) {
+  for (const { key, value, path, isShadowed, isGroup } of entries) {
     if (isShadowed || isOwnedName(key)) {
       losses.push({ path, reason: "omitted" });
+
+      continue;
+    }
+
+    if (
+      isGroup &&
+      (key.length > MAX_NAME_LENGTH ||
+        (typeof value === "string" && value.length > MAX_STRING_LENGTH))
+    ) {
+      losses.push({ path, reason: "invalid" });
 
       continue;
     }

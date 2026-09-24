@@ -3,7 +3,12 @@ import type { AnalyticsAdapter, TrackResult } from "@priemskiyyy/trace";
 
 import type { MixpanelAdapterOptions } from "src/types/MixpanelAdapterOptions";
 import type { MixpanelLike } from "src/types/MixpanelLike";
-import { MAX_EVENT_AGE, MAX_EVENT_SIZE } from "src/utils/constants/limits";
+import {
+  MAX_EVENT_AGE,
+  MAX_EVENT_SIZE,
+  MAX_NAME_LENGTH,
+  MAX_STRING_LENGTH,
+} from "src/utils/constants/limits";
 import { createRequests } from "src/utils/createRequests";
 import { getMixpanelProperties } from "src/utils/getMixpanelProperties";
 import { getProfileUpdate } from "src/utils/getProfileUpdate";
@@ -42,6 +47,32 @@ export const mixpanel = <TSdk extends MixpanelLike>({
       track: (event, { now }) => {
         if (event.identity.user === null && anonymousId === undefined) {
           return { status: "skipped", reason: "unidentified" };
+        }
+
+        if (
+          event.identity.user !== null &&
+          event.identity.user.id.length > MAX_STRING_LENGTH
+        ) {
+          return {
+            status: "failed",
+            error: new TraceError({
+              code: "DELIVERY_FAILED",
+              message: `Mixpanel keeps the first ${MAX_STRING_LENGTH} characters of a distinct id, so this user would share an identity with any id that starts the same.`,
+            }),
+          };
+        }
+
+        if (
+          anonymousId !== undefined &&
+          anonymousId.length > MAX_STRING_LENGTH
+        ) {
+          return {
+            status: "failed",
+            error: new TraceError({
+              code: "DELIVERY_FAILED",
+              message: `Mixpanel keeps the first ${MAX_STRING_LENGTH} characters of a distinct id, so this visitor would share an identity with any id that starts the same.`,
+            }),
+          };
         }
 
         if (now() - event.timestamp > MAX_EVENT_AGE) {
@@ -85,6 +116,13 @@ export const mixpanel = <TSdk extends MixpanelLike>({
           });
         }
 
+        if (user.id.length > MAX_STRING_LENGTH) {
+          throw new TraceError({
+            code: "DELIVERY_FAILED",
+            message: `Mixpanel keeps the first ${MAX_STRING_LENGTH} characters of a distinct id, so this user would share an identity with any id that starts the same.`,
+          });
+        }
+
         const update = getProfileUpdate({
           ...Object.fromEntries(remove.map((key) => [key, null])),
           ...set,
@@ -119,26 +157,30 @@ export const mixpanel = <TSdk extends MixpanelLike>({
           });
         }
 
-        if (id === null) {
-          if (user === null) {
-            return;
-          }
+        if (type.length > MAX_NAME_LENGTH) {
+          throw new TraceError({
+            code: "UNSUPPORTED",
+            message:
+              "Mixpanel would cut this group's type past 255 characters, so the membership was left out.",
+          });
+        }
 
-          const leaving = getProfileUpdate({ [type]: null });
-
-          if (!leaving.isComplete) {
-            throw new TraceError({
-              code: "UNSUPPORTED",
-              message:
-                "Mixpanel would cut this group type on the user's profile, so the membership cannot be removed.",
+        if (id === null || id.length > MAX_STRING_LENGTH) {
+          if (user !== null) {
+            requests.queue((callback) => {
+              sdk.people.unset(user.id, [type], callback);
             });
           }
 
-          requests.queue((callback) => {
-            sdk.people.unset(user.id, leaving.remove, callback);
-          });
+          if (id === null) {
+            return;
+          }
 
-          return;
+          throw new TraceError({
+            code: "UNSUPPORTED",
+            message:
+              "Mixpanel would cut this group's id past 255 characters, so the membership was left out and any earlier group of this type was left.",
+          });
         }
 
         const update = getProfileUpdate(traits);

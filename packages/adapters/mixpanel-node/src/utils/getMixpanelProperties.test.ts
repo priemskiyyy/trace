@@ -305,7 +305,7 @@ test("a nested limit reaches the losses under the property's own path", () => {
   });
 });
 
-test("a membership id over 255 characters is a truncated loss, after the properties' and the context's", () => {
+test("a membership id over 255 characters is left out as an invalid loss, never sent cut, after the properties' and the context's", () => {
   expect(
     getMixpanelProperties(
       createTrackedEvent({
@@ -318,8 +318,19 @@ test("a membership id over 255 characters is a truncated loss, after the propert
   ).toStrictEqual([
     { path: "properties.note", reason: "truncated" },
     { path: "context.note", reason: "omitted" },
-    { path: "identity.groups.workspace", reason: "truncated" },
+    { path: "identity.groups.workspace", reason: "invalid" },
   ]);
+});
+
+test("a membership type over 255 characters is left out as an invalid loss, never sent cut", () => {
+  const type = "t".repeat(256);
+
+  expect(
+    getMixpanelProperties(
+      createTrackedEvent({ identity: withGroups({ [type]: "w_1" }) }),
+      undefined,
+    ).losses,
+  ).toStrictEqual([{ path: `identity.groups.${type}`, reason: "invalid" }]);
 });
 
 test("a group type named __proto__ stays a key of its own, holding the membership", () => {

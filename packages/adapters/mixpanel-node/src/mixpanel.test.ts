@@ -169,6 +169,44 @@ test("an event is one track call with its user, the anonymous id, its time, its 
   });
 });
 
+test("a membership whose group id or type Mixpanel would cut is left off the event with an invalid loss, never sent cut, because a cut id would file the event under another group", async () => {
+  const fake = fakeMixpanel();
+  const longType = "t".repeat(256);
+
+  const answer = await open(fake).track(
+    createTrackedEvent({
+      identity: {
+        generation: 1,
+        user: { id: "ada" },
+        traits: {},
+        groups: {
+          workspace: { id: "w".repeat(256), traits: {} },
+          [longType]: { id: "w_2", traits: {} },
+        },
+      },
+    }),
+    createContext(),
+  );
+
+  expect(fake.calls).toStrictEqual([
+    {
+      method: "track",
+      args: [
+        "Checkout Started",
+        { time: NOW, $insert_id: EVENT_ID, $user_id: "ada" },
+      ],
+    },
+  ]);
+  expect(answer).toStrictEqual({
+    status: "submitted",
+    evidence: "backend-acknowledged",
+    losses: [
+      { path: "identity.groups.workspace", reason: "invalid" },
+      { path: `identity.groups.${longType}`, reason: "invalid" },
+    ],
+  });
+});
+
 test("an identified event without an anonymous id carries only $user_id, and an anonymous event only $device_id", async () => {
   const fake = fakeMixpanel();
 
@@ -290,6 +328,76 @@ test("an event keeps the user it was accepted with after the Trace's user change
   ]);
 });
 
+test("track answers failed with DELIVERY_FAILED before any call when the user id is over 255 characters, which Mixpanel would cut and merge that user with another, and one of 255 is sent whole", async () => {
+  const kept = fakeMixpanel();
+  const refused = fakeMixpanel();
+
+  expect(
+    open(refused).track(
+      createTrackedEvent({
+        identity: {
+          generation: 1,
+          user: { id: "u".repeat(256) },
+          traits: {},
+          groups: {},
+        },
+      }),
+      createContext(),
+    ),
+  ).toStrictEqual({
+    status: "failed",
+    error: new TraceError({
+      code: "DELIVERY_FAILED",
+      message:
+        "Mixpanel keeps the first 255 characters of a distinct id, so this user would share an identity with any id that starts the same.",
+    }),
+  });
+  expect(refused.calls).toStrictEqual([]);
+
+  await expect(
+    open(kept).track(
+      createTrackedEvent({
+        identity: {
+          generation: 1,
+          user: { id: "u".repeat(255) },
+          traits: {},
+          groups: {},
+        },
+      }),
+      createContext(),
+    ),
+  ).resolves.toMatchObject({ status: "submitted" });
+  expect(getMethods(kept)).toStrictEqual(["track"]);
+});
+
+test("track answers failed with DELIVERY_FAILED before any call when anonymousId is over 255 characters, which Mixpanel would cut and merge that visitor with another, and one of 255 is sent whole", async () => {
+  const kept = fakeMixpanel();
+  const refused = fakeMixpanel();
+
+  expect(
+    open(refused, { anonymousId: "v".repeat(256) }).track(
+      createTrackedEvent({ identity: ANONYMOUS }),
+      createContext(),
+    ),
+  ).toStrictEqual({
+    status: "failed",
+    error: new TraceError({
+      code: "DELIVERY_FAILED",
+      message:
+        "Mixpanel keeps the first 255 characters of a distinct id, so this visitor would share an identity with any id that starts the same.",
+    }),
+  });
+  expect(refused.calls).toStrictEqual([]);
+
+  await expect(
+    open(kept, { anonymousId: "v".repeat(255) }).track(
+      createTrackedEvent({ identity: ANONYMOUS }),
+      createContext(),
+    ),
+  ).resolves.toMatchObject({ status: "submitted" });
+  expect(getMethods(kept)).toStrictEqual(["track"]);
+});
+
 test("an event older than five days on the context's clock is dropped as provider-filtered with an unsupported timestamp, and one exactly five days old is sent", async () => {
   const fake = fakeMixpanel();
   const session = open(fake);
@@ -405,6 +513,24 @@ test("traits without a user are refused as unsupported and send nothing, because
       code: "UNSUPPORTED",
       message:
         "Mixpanel keeps traits on a user's profile, and this update has no user.",
+    }),
+  );
+  expect(fake.calls).toStrictEqual([]);
+});
+
+test("a user id over 255 characters, which Mixpanel would cut, fails traits with DELIVERY_FAILED before any call, so two users sharing the part it keeps never merge", () => {
+  const fake = fakeMixpanel();
+  const user = { id: "u".repeat(256) };
+
+  expect(
+    getThrown(() =>
+      open(fake).traits?.({ user, set: { plan: "pro" }, remove: [] }),
+    ),
+  ).toStrictEqual(
+    new TraceError({
+      code: "DELIVERY_FAILED",
+      message:
+        "Mixpanel keeps the first 255 characters of a distinct id, so this user would share an identity with any id that starts the same.",
     }),
   );
   expect(fake.calls).toStrictEqual([]);
@@ -596,24 +722,34 @@ test("a group trait removal whose name is longer than 255 characters is left out
   ]);
 });
 
-test("leaving a group whose type is longer than 255 characters removes nothing and is refused as unsupported, because Mixpanel would cut the name and remove another property, and a type of 255 characters is removed", async () => {
+test("a group type over 255 characters is refused before any call, joining or leaving, and one of 255 is kept", async () => {
   const fake = fakeMixpanel();
   const session = open(fake);
+  const long = "t".repeat(256);
+
+  const refused = new TraceError({
+    code: "UNSUPPORTED",
+    message:
+      "Mixpanel would cut this group's type past 255 characters, so the membership was left out.",
+  });
 
   expect(
     getThrown(() =>
       session.group?.({
         user: { id: "ada" },
-        group: { type: "t".repeat(256), id: null, traits: {} },
+        group: { type: long, id: "w_1", traits: {} },
       }),
     ),
-  ).toStrictEqual(
-    new TraceError({
-      code: "UNSUPPORTED",
-      message:
-        "Mixpanel would cut this group type on the user's profile, so the membership cannot be removed.",
-    }),
-  );
+  ).toStrictEqual(refused);
+  expect(
+    getThrown(() =>
+      session.group?.({
+        user: { id: "ada" },
+        group: { type: long, id: null, traits: {} },
+      }),
+    ),
+  ).toStrictEqual(refused);
+  expect(fake.calls).toStrictEqual([]);
 
   session.group?.({
     user: { id: "ada" },
@@ -685,14 +821,39 @@ test("a group trait Mixpanel would cut, refuse or take as a control key is left 
   ]);
 });
 
-test("a membership whose group id Mixpanel would cut on the user's profile is left out, the group's own traits are sent, and the step throws UNSUPPORTED", async () => {
+test("a membership whose group id Mixpanel would cut sends no group request, leaves the type on the user's profile, and the step throws UNSUPPORTED", async () => {
+  const fake = fakeMixpanel();
+  const id = "w".repeat(256);
+
+  const refusal = getThrown(() =>
+    open(fake).group?.({
+      user: { id: "ada" },
+      group: { type: "workspace", id, traits: { tier: "team" } },
+    }),
+  );
+
+  await nextMacrotask();
+
+  expect(refusal).toStrictEqual(
+    new TraceError({
+      code: "UNSUPPORTED",
+      message:
+        "Mixpanel would cut this group's id past 255 characters, so the membership was left out and any earlier group of this type was left.",
+    }),
+  );
+  expect(fake.calls).toStrictEqual([
+    { method: "people.unset", args: ["ada", ["workspace"]] },
+  ]);
+});
+
+test("a membership whose group id Mixpanel would cut and has no user sends no group request and leaves nothing, and the step throws UNSUPPORTED", () => {
   const fake = fakeMixpanel();
   const id = "w".repeat(256);
 
   expect(
     getThrown(() =>
-      open(fake).group?.({
-        user: { id: "ada" },
+      open(fake, { anonymousId: VISITOR }).group?.({
+        user: null,
         group: { type: "workspace", id, traits: { tier: "team" } },
       }),
     ),
@@ -700,15 +861,10 @@ test("a membership whose group id Mixpanel would cut on the user's profile is le
     new TraceError({
       code: "UNSUPPORTED",
       message:
-        "Mixpanel cannot keep every part of this group update as it is; the rest is sent.",
+        "Mixpanel would cut this group's id past 255 characters, so the membership was left out and any earlier group of this type was left.",
     }),
   );
-
-  await nextMacrotask();
-
-  expect(fake.calls).toStrictEqual([
-    { method: "groups.set", args: ["workspace", id, { tier: "team" }] },
-  ]);
+  expect(fake.calls).toStrictEqual([]);
 });
 
 test("a later profile update never overtakes an earlier one: each profile request of a session waits for Mixpanel's answer to the one before it, across traits and groups", async () => {

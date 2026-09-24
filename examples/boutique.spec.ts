@@ -30,9 +30,16 @@ const latestReceipt = (page: Page) =>
 
 const addToCart = (page: Page, product: string) =>
   page
+    .getByRole("list", { name: "Products" })
     .getByRole("listitem", { name: product })
     .getByRole("button", { name: "Add to cart" })
     .click();
+
+const checkOut = async (page: Page, action: string) => {
+  await page.getByRole("button", { name: "Check out" }).click();
+  await expect(latestReceipt(page).getByText(action)).toBeVisible();
+  await expect(latestReceipt(page).getByText("Settled")).toBeVisible();
+};
 
 const hasHorizontalScroll = (page: Page) =>
   page.evaluate(
@@ -47,12 +54,14 @@ for (const width of WIDTHS) {
   }, testInfo) => {
     const errors = await open(page, width);
 
+    await expect(
+      latestReceipt(page).getByText("Open the storefront"),
+    ).toBeVisible();
     await addToCart(page, "Suede Boots");
-    await page.getByRole("button", { name: "Check out" }).click();
+    await checkOut(page, "Check out 1 item");
 
     const receipt = latestReceipt(page);
 
-    await expect(receipt.getByText("Settled")).toBeVisible();
     await expect(
       receipt.getByRole("listitem", { name: "Your API" }),
     ).toContainText("Submitted");
@@ -69,20 +78,20 @@ for (const width of WIDTHS) {
   });
 }
 
-test("with Segment started and consent granted, checking out reaches every destination with the same accepted event", async ({
+test("with consent granted, checking out reaches every destination with the same accepted event, and the receipt names what Trace removed", async ({
   page,
 }) => {
   const errors = await open(page, 1280);
 
-  await page.getByRole("button", { name: "Segment not initialized" }).click();
-  await page.getByRole("button", { name: "Retry start" }).click();
   await page.getByRole("button", { name: "Accept" }).click();
   await addToCart(page, "Suede Boots");
-  await page.getByRole("button", { name: "Check out" }).click();
+  await checkOut(page, "Check out 1 item");
 
   const receipt = latestReceipt(page);
 
-  await expect(receipt.getByText("Settled")).toBeVisible();
+  await expect(
+    receipt.getByRole("list", { name: "Removed before sending" }),
+  ).toContainText("properties.payment.card.token: redacted");
 
   for (const destination of DESTINATIONS) {
     await expect(
@@ -100,15 +109,16 @@ test("switching accounts keeps each event under its own account", async ({
 
   await page.getByRole("button", { name: "Nora Fields" }).click();
   await addToCart(page, "Canvas Tote");
-  await page.getByRole("button", { name: "Check out" }).click();
-  await expect(latestReceipt(page).getByText("Settled")).toBeVisible();
+  await checkOut(page, "Check out 1 item");
 
   await page.getByRole("button", { name: "Isabella Cruz" }).click();
 
-  const timeline = page.getByRole("list", { name: "Account timeline" });
+  const receipts = page.getByRole("list", { name: "Receipts" });
 
-  await expect(timeline.getByText("Nora Fields")).toBeVisible();
-  await expect(page.getByText("Signed in now: Isabella Cruz.")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Isabella Cruz" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(receipts.getByText(/Nora Fields/)).toBeVisible();
   expect(errors).toEqual([]);
 });
 
@@ -117,9 +127,14 @@ test("joining a crew is carried to Segment as its one group", async ({
 }) => {
   const errors = await open(page, 1280);
 
+  await page.getByRole("button", { name: "Accept" }).click();
   await page.getByRole("button", { name: "Night Market Crew" }).click();
 
-  await expect(page.getByText("In Night Market Crew.")).toBeVisible();
+  await expect(
+    page
+      .getByRole("list", { name: "Destinations" })
+      .getByRole("listitem", { name: "Segment" }),
+  ).toContainText("Night Market Crew");
   expect(errors).toEqual([]);
 });
 
@@ -129,13 +144,16 @@ test("consent gates the five provider destinations, never your own API", async (
   const errors = await open(page, 1280);
 
   await addToCart(page, "Silk Scarf");
-  await page.getByRole("button", { name: "Check out" }).click();
+  await checkOut(page, "Check out 1 item");
 
   const receipt = latestReceipt(page);
 
   await expect(
     receipt.getByRole("listitem", { name: "Mixpanel" }),
   ).toContainText("Not routed");
+  await expect(
+    receipt.getByRole("listitem", { name: "Mixpanel" }),
+  ).toContainText("Held back: consent was not answered yet.");
   await expect(
     receipt.getByRole("listitem", { name: "Your API" }),
   ).toContainText("Submitted");
@@ -156,10 +174,40 @@ test("an offline backend fails only its own outcome", async ({ page }) => {
   await page.getByRole("button", { name: "Your API offline" }).click();
   await addToCart(page, "Canvas Tote");
   await page.getByRole("button", { name: "Check out" }).click();
+  await expect(latestReceipt(page).getByText("Check out 1 item")).toBeVisible();
 
   await expect(
     latestReceipt(page).getByRole("listitem", { name: "Your API" }),
   ).toContainText("Failed");
+  expect(errors).toEqual([]);
+});
+
+test("stalling Segment restarts Trace, and its checkout waits for a retried start", async ({
+  page,
+}) => {
+  const errors = await open(page, 1280);
+
+  await page.getByRole("button", { name: "Accept" }).click();
+  await page.getByRole("button", { name: "Segment never loads" }).click();
+  await expect(
+    page
+      .getByRole("list", { name: "Destinations" })
+      .getByRole("listitem", { name: "Segment" }),
+  ).toContainText("Start failed");
+
+  await addToCart(page, "Silk Scarf");
+  await page.getByRole("button", { name: "Check out" }).click();
+
+  const segment = latestReceipt(page).getByRole("listitem", {
+    name: "Segment",
+  });
+
+  await expect(segment).toContainText("Sending");
+
+  await page.getByRole("button", { name: "Segment never loads" }).click();
+  await page.getByRole("button", { name: "Retry start" }).click();
+
+  await expect(segment).toContainText("Submitted");
   expect(errors).toEqual([]);
 });
 

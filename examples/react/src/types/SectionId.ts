@@ -1,2 +1,2 @@
 export type SectionId =
-  "shop" | "accounts" | "teams" | "consent" | "lab" | "timeline";
+  "shop" | "receipts" | "destinations" | "lab" | "timeline";

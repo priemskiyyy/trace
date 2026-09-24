@@ -1,12 +1,14 @@
 import type { Receipt } from "@priemskiyyy/trace";
-import type { RegisteredDestinationName } from "@priemskiyyy/trace-solid";
 import { useTrace } from "@priemskiyyy/trace-solid";
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
 
-import type { createCart } from "example-shared/boutique/cart/createCart";
+import { getCartItemCount } from "example-shared/boutique/cart/getCartItemCount";
 import { getCartTotal } from "example-shared/boutique/cart/getCartTotal";
+import type { CartStore } from "example-shared/boutique/cart/types/CartStore";
 import { createOrderPayload } from "example-shared/boutique/checkout/createOrderPayload";
+import type { BoutiqueDestination } from "example-shared/boutique/reporting/types/BoutiqueDestination";
+import { formatItemCount } from "example-shared/formatting/formatItemCount";
 import { formatMoney } from "example-shared/formatting/formatMoney";
 import { buttonStyles } from "example-shared/ui/styles/buttonStyles";
 import { BasePanel } from "src/components/BasePanel/BasePanel";
@@ -14,11 +16,8 @@ import { EmptyState } from "src/components/EmptyState/EmptyState";
 import { useObservable } from "src/primitives/useObservable";
 
 type CartPanelProps = {
-  cart: ReturnType<typeof createCart>;
-  onCheckout: (
-    receipt: Receipt<RegisteredDestinationName>,
-    action: string,
-  ) => void;
+  cart: CartStore;
+  onReceipt: (receipt: Receipt<BoutiqueDestination>, action: string) => void;
 };
 
 export const CartPanel: Component<CartPanelProps> = (props) => {
@@ -40,9 +39,9 @@ export const CartPanel: Component<CartPanelProps> = (props) => {
       createOrderPayload(cart),
     );
 
-    props.onCheckout(
+    props.onReceipt(
       receipt,
-      `Buy ${cart.lines.length} item${cart.lines.length === 1 ? "" : "s"}`,
+      `Check out ${formatItemCount(getCartItemCount(cart))}`,
     );
     props.cart.clear();
   };

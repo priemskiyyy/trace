@@ -1,7 +1,7 @@
 export type NetworkRequest = {
   id: number;
-  orderId: string;
-  account: string | null;
+  event: { id: string; name: string };
+  user: { id: string } | null;
   outcome: "accepted" | "failed" | "aborted";
   duration: number;
   at: number;

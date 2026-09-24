@@ -1,9 +1,9 @@
 import type React from "react";
 
+import type { TimelineEntry } from "example-shared/boutique/reporting/types/TimelineEntry";
 import { formatClockTime } from "example-shared/formatting/formatClockTime";
 import type { Tone } from "example-shared/ui/types/Tone";
 import { Badge } from "src/components/Badge/Badge";
-import type { TimelineEntry } from "src/types/TimelineEntry";
 
 type TimelineRowProps = { entry: TimelineEntry };
 

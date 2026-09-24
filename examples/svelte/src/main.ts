@@ -1,7 +1,7 @@
 import { mount, unmount } from "svelte";
 
+import { startBoutique } from "example-shared/boutique/reporting/startBoutique";
 import Application from "src/Application.svelte";
-import { startBoutique } from "src/utils/startBoutique";
 import "src/styles.css";
 
 const target = document.getElementById("root");
@@ -10,7 +10,7 @@ if (target === null) {
   throw new Error("The page has no #root element.");
 }
 
-const runtime = startBoutique({ latency: 400 });
+const { runtime } = startBoutique({ latency: 400 });
 const application = mount(Application, { target, props: { runtime } });
 
 const disposeHost = () => {

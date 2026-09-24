@@ -1,17 +1,18 @@
 import { Eraser, Terminal } from "@phosphor-icons/react";
 import type React from "react";
 
-import type { createOrdersBackend } from "example-shared/backend/createOrdersBackend";
+import type { OrdersBackend } from "example-shared/backend/types/OrdersBackend";
+import { REQUEST_LABELS } from "example-shared/boutique/reporting/constants/labels";
 import { formatDuration } from "example-shared/formatting/formatDuration";
+import { formatShortId } from "example-shared/formatting/formatShortId";
+import { REQUEST_TONES } from "example-shared/ui/constants/tones";
 import { buttonStyles } from "example-shared/ui/styles/buttonStyles";
 import { Badge } from "src/components/Badge/Badge";
 import { EmptyState } from "src/components/EmptyState/EmptyState";
 import { Panel } from "src/components/Panel/Panel";
 import { useEventLog } from "src/hooks/useEventLog";
-import { REQUEST_LABELS } from "src/utils/constants/labels";
-import { REQUEST_TONES } from "src/utils/constants/tones";
 
-type NetworkPanelProps = { backend: ReturnType<typeof createOrdersBackend> };
+type NetworkPanelProps = { backend: OrdersBackend };
 
 export const NetworkPanel: React.FunctionComponent<NetworkPanelProps> = ({
   backend,
@@ -56,7 +57,8 @@ export const NetworkPanel: React.FunctionComponent<NetworkPanelProps> = ({
                   <span className="font-semibold">POST</span> /api/orders
                 </span>
                 <span className="truncate font-mono text-xs text-zinc-500">
-                  {request.orderId} · {request.account ?? "anonymous"}
+                  {request.event.name} · {formatShortId(request.event.id)} ·{" "}
+                  {request.user?.id ?? "anonymous"}
                 </span>
               </span>
               <Badge tone={REQUEST_TONES[request.outcome]}>

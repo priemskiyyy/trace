@@ -39,14 +39,13 @@ The domain lives in `examples/shared`: the event registry with its Zod schemas, 
 
 ## The tour
 
-The React example walks through six sections, each with a "Try this" hint:
+The React example walks through five sections, each with a "Try this" hint:
 
-1. **Browse and check out.** Every event is declared once and typed. Each checkout answers a receipt with an outcome for every destination, its evidence and anything the provider could not carry.
-2. **Accounts.** Sign in, switch accounts and sign out, and the timeline shows that no event of one account reached another.
-3. **Teams.** Join a team, switch to another and leave it.
-4. **Consent.** The banner asks for purposes. Nothing reaches a gated destination while its purposes are unknown, and each simulated SDK with a switch has its own collection switched off and on.
-5. **Break the destinations.** Make a provider slow, take it offline, start it uninitialized and retry, make it filter events, or slow the HTTP backend past the timeout, and read what each receipt says.
-6. **Watch it happen.** The timeline is Trace's diagnostics stream, in words, and the [devtools](devtools.md) are mounted over the same runtime.
+1. **One checkout, six answers.** Every search, view and checkout is one typed event, and its receipt answers an outcome for every destination, its evidence, what Trace removed before any destination saw it, and anything a provider could not carry.
+2. **Every event keeps its shopper.** Sign in, switch accounts and sign out: every receipt stays under the shopper it was tracked with, and a legend says what each outcome claims.
+3. **Consent reaches every destination.** Nothing reaches a gated destination while its purposes are unknown, each simulated SDK with a switch turns its own collection off and on, and Segment, which has none, is held at Trace's door. A crew joined shows on Segment's card as its group.
+4. **Break one destination.** Slow your API past the timeout, take it offline, make PostHog filter every event, or stall Segment and retry its start, and read what each receipt says. Only the broken destination's answer changes.
+5. **Watch it happen.** The timeline is Trace's diagnostics stream, in words, and the [devtools](devtools.md) are mounted over the same runtime.
 
 ## Tests
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
 import BasePanel from "src/components/BasePanel/BasePanel.vue";
 import EmptyState from "src/components/EmptyState/EmptyState.vue";
 import LatestReceipt from "src/components/Shop/LatestReceipt.vue";
-import type { TrackedReceipt } from "src/types/TrackedReceipt";
 
 defineProps<{ tracked: TrackedReceipt | null }>();
 </script>

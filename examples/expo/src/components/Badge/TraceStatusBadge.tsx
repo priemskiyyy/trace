@@ -1,9 +1,9 @@
 import { useTraceStatus } from "@priemskiyyy/trace-react";
 import type React from "react";
 
+import { TRACE_STATUS_LABELS } from "example-shared/boutique/reporting/constants/labels";
+import { TRACE_STATUS_TONES } from "example-shared/ui/constants/tones";
 import { Badge } from "src/components/Badge/Badge";
-import { TRACE_STATUS_LABELS } from "src/utils/constants/labels";
-import { TRACE_STATUS_TONES } from "src/utils/constants/tones";
 
 export const TraceStatusBadge: React.FunctionComponent = () => {
   const { state } = useTraceStatus();

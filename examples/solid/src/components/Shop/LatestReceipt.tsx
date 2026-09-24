@@ -1,12 +1,12 @@
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
 
+import { DESTINATION_NAMES } from "example-shared/boutique/reporting/constants/destinations";
+import { getReceiptDisplay } from "example-shared/boutique/reporting/getReceiptDisplay";
+import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
 import { ToneBadge } from "src/components/Badge/ToneBadge";
 import { DestinationOutcomeRow } from "src/components/Shop/DestinationOutcomeRow";
 import { useObservable } from "src/primitives/useObservable";
-import type { TrackedReceipt } from "src/types/TrackedReceipt";
-import { DESTINATION_NAMES } from "src/utils/constants/destinations";
-import { getReceiptDisplay } from "src/utils/getReceiptDisplay";
 
 type LatestReceiptProps = { tracked: TrackedReceipt };
 

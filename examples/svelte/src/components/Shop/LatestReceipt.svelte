@@ -1,10 +1,10 @@
 <script lang="ts">
+  import { DESTINATION_NAMES } from "example-shared/boutique/reporting/constants/destinations";
+  import { getReceiptDisplay } from "example-shared/boutique/reporting/getReceiptDisplay";
+  import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
   import ToneBadge from "src/components/Badge/ToneBadge.svelte";
   import DestinationOutcomeRow from "src/components/Shop/DestinationOutcomeRow.svelte";
   import { useObservable } from "src/utilities/useObservable.svelte";
-  import type { TrackedReceipt } from "src/types/TrackedReceipt";
-  import { DESTINATION_NAMES } from "src/utils/constants/destinations";
-  import { getReceiptDisplay } from "src/utils/getReceiptDisplay";
 
   type Props = { tracked: TrackedReceipt };
 

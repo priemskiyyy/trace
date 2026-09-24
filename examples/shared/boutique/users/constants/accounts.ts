@@ -6,12 +6,14 @@ export const ACCOUNTS: Record<AccountId, Account> = {
   nora: {
     id: "nora",
     name: "Nora Fields",
+    initials: "NF",
     email: "nora@example.com",
     plan: "member",
   },
   isabella: {
     id: "isabella",
     name: "Isabella Cruz",
+    initials: "IC",
     email: "isabella@example.com",
     plan: "vip",
   },

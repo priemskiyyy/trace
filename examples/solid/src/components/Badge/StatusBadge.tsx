@@ -1,10 +1,10 @@
 import { useTraceStatus } from "@priemskiyyy/trace-solid";
 import type { Component } from "solid-js";
 
+import { TRACE_STATUS_LABELS } from "example-shared/boutique/reporting/constants/labels";
+import { TRACE_STATUS_TONES } from "example-shared/ui/constants/tones";
 import { dotStyles } from "example-shared/ui/styles/dotStyles";
 import { ToneBadge } from "src/components/Badge/ToneBadge";
-import { TRACE_STATUS_LABELS } from "src/utils/constants/labels";
-import { TRACE_STATUS_TONES } from "src/utils/constants/tones";
 
 export const StatusBadge: Component = () => {
   const status = useTraceStatus();

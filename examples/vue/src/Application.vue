@@ -1,34 +1,39 @@
 <script setup lang="ts">
 import type { Receipt } from "@priemskiyyy/trace";
 import { TraceDevtools } from "@priemskiyyy/trace-devtools/vue";
-import type { RegisteredDestinationName } from "@priemskiyyy/trace-vue";
 import { TraceProvider } from "@priemskiyyy/trace-vue";
 import { ref } from "vue";
 
 import { createCart } from "example-shared/boutique/cart/createCart";
 import type { ProductId } from "example-shared/boutique/catalog/types/ProductId";
+import { createTrackedReceipt } from "example-shared/boutique/reporting/createTrackedReceipt";
+import type { BoutiqueDestination } from "example-shared/boutique/reporting/types/BoutiqueDestination";
+import type { BoutiqueRuntime } from "example-shared/boutique/reporting/types/BoutiqueRuntime";
+import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
 import ConsentBanner from "src/components/Consent/ConsentBanner.vue";
 import PageHeader from "src/components/PageHeader/PageHeader.vue";
 import CartPanel from "src/components/Shop/CartPanel.vue";
 import ProductGrid from "src/components/Shop/ProductGrid.vue";
 import ReceiptPanel from "src/components/Shop/ReceiptPanel.vue";
-import type { BoutiqueRuntime } from "src/types/BoutiqueRuntime";
-import type { TrackedReceipt } from "src/types/TrackedReceipt";
 
-defineProps<{ runtime: BoutiqueRuntime }>();
+const props = defineProps<{ runtime: BoutiqueRuntime }>();
 
 const cart = createCart();
 const tracked = ref<TrackedReceipt | null>(null);
 
-const handleAdd = (productId: ProductId) => {
+const handleAddPress = (productId: ProductId) => {
   cart.add(productId);
 };
 
-const handleCheckout = (
-  receipt: Receipt<RegisteredDestinationName>,
+const handleReceipt = (
+  receipt: Receipt<BoutiqueDestination>,
   action: string,
 ) => {
-  tracked.value = { receipt, action, at: Date.now() };
+  tracked.value = createTrackedReceipt(props.runtime.trace, {
+    receipt,
+    action,
+    account: null,
+  });
 };
 </script>
 
@@ -50,8 +55,8 @@ const handleCheckout = (
       <ConsentBanner />
       <div class="grid items-start gap-4 lg:grid-cols-2">
         <div class="flex flex-col gap-4">
-          <ProductGrid :on-add="handleAdd" />
-          <CartPanel :cart="cart" :on-checkout="handleCheckout" />
+          <ProductGrid @add-press="handleAddPress" />
+          <CartPanel :cart="cart" @receipt="handleReceipt" />
         </div>
         <ReceiptPanel :tracked="tracked" />
       </div>

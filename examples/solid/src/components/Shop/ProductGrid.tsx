@@ -9,7 +9,7 @@ import { formatMoney } from "example-shared/formatting/formatMoney";
 import { buttonStyles } from "example-shared/ui/styles/buttonStyles";
 import { CARD_CLASS_NAME } from "example-shared/ui/styles/cardStyles";
 
-type ProductGridProps = { onAdd: (productId: ProductId) => void };
+type ProductGridProps = { onAddPress: (productId: ProductId) => void };
 
 export const ProductGrid: Component<ProductGridProps> = (props) => (
   <ul aria-label="Products" class="grid gap-3 sm:grid-cols-3">
@@ -28,7 +28,7 @@ export const ProductGrid: Component<ProductGridProps> = (props) => (
           <button
             type="button"
             class={buttonStyles({ size: "small" })}
-            onClick={() => props.onAdd(productId)}
+            onClick={() => props.onAddPress(productId)}
           >
             Add to cart
           </button>

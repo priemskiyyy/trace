@@ -1,10 +1,10 @@
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
 
+import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
 import { BasePanel } from "src/components/BasePanel/BasePanel";
 import { EmptyState } from "src/components/EmptyState/EmptyState";
 import { LatestReceipt } from "src/components/Shop/LatestReceipt";
-import type { TrackedReceipt } from "src/types/TrackedReceipt";
 
 type ReceiptPanelProps = { tracked: TrackedReceipt | null };
 

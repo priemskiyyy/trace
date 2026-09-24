@@ -1,18 +1,18 @@
 import type { DestinationOutcome } from "@priemskiyyy/trace";
-import type { RegisteredDestinationName } from "@priemskiyyy/trace-solid";
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
 
+import { DESTINATION_GUIDES } from "example-shared/boutique/reporting/constants/destinations";
+import { OUTCOME_LABELS } from "example-shared/boutique/reporting/constants/labels";
+import { getOutcomeStatus } from "example-shared/boutique/reporting/getOutcomeStatus";
+import type { BoutiqueDestination } from "example-shared/boutique/reporting/types/BoutiqueDestination";
 import { formatLoss } from "example-shared/formatting/formatLoss";
 import { formatOutcome } from "example-shared/formatting/formatOutcome";
+import { OUTCOME_TONES } from "example-shared/ui/constants/tones";
 import { ToneBadge } from "src/components/Badge/ToneBadge";
-import { DESTINATION_GUIDES } from "src/utils/constants/destinations";
-import { OUTCOME_LABELS } from "src/utils/constants/labels";
-import { OUTCOME_TONES } from "src/utils/constants/tones";
-import { getOutcomeStatus } from "src/utils/getOutcomeStatus";
 
 type DestinationOutcomeRowProps = {
-  name: RegisteredDestinationName;
+  name: BoutiqueDestination;
   outcome: DestinationOutcome | null | undefined;
 };
 

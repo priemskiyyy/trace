@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import type { Receipt } from "@priemskiyyy/trace";
-import type { RegisteredDestinationName } from "@priemskiyyy/trace-vue";
 import { useTrace } from "@priemskiyyy/trace-vue";
 import { computed } from "vue";
 
-import type { createCart } from "example-shared/boutique/cart/createCart";
+import { getCartItemCount } from "example-shared/boutique/cart/getCartItemCount";
 import { getCartTotal } from "example-shared/boutique/cart/getCartTotal";
+import type { CartStore } from "example-shared/boutique/cart/types/CartStore";
 import { createOrderPayload } from "example-shared/boutique/checkout/createOrderPayload";
+import type { BoutiqueDestination } from "example-shared/boutique/reporting/types/BoutiqueDestination";
+import { formatItemCount } from "example-shared/formatting/formatItemCount";
 import { formatMoney } from "example-shared/formatting/formatMoney";
 import { buttonStyles } from "example-shared/ui/styles/buttonStyles";
 import BasePanel from "src/components/BasePanel/BasePanel.vue";
 import EmptyState from "src/components/EmptyState/EmptyState.vue";
 import { useObservable } from "src/composables/useObservable";
 
-const props = defineProps<{
-  cart: ReturnType<typeof createCart>;
-  onCheckout: (
-    receipt: Receipt<RegisteredDestinationName>,
-    action: string,
-  ) => void;
+const props = defineProps<{ cart: CartStore }>();
+
+const emit = defineEmits<{
+  receipt: [receipt: Receipt<BoutiqueDestination>, action: string];
 }>();
 
 const trace = useTrace();
@@ -39,9 +39,10 @@ const handleCheckoutClick = () => {
     createOrderPayload(cart),
   );
 
-  props.onCheckout(
+  emit(
+    "receipt",
     receipt,
-    `Buy ${cart.lines.length} item${cart.lines.length === 1 ? "" : "s"}`,
+    `Check out ${formatItemCount(getCartItemCount(cart))}`,
   );
   props.cart.clear();
 };

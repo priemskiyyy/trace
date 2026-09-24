@@ -1,7 +1,7 @@
 import { render } from "solid-js/web";
 
+import { startBoutique } from "example-shared/boutique/reporting/startBoutique";
 import { Application } from "src/Application";
-import { startBoutique } from "src/utils/startBoutique";
 import "src/styles.css";
 
 const root = document.getElementById("root");
@@ -10,7 +10,7 @@ if (root === null) {
   throw new Error("The page has no #root element.");
 }
 
-const runtime = startBoutique({ latency: 400 });
+const { runtime } = startBoutique({ latency: 400 });
 const dispose = render(() => <Application runtime={runtime} />, root);
 
 const disposeHost = () => {

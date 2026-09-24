@@ -20,7 +20,8 @@ const handleResetClick = () => {
       <ToneBadge tone="neutral">Vue</ToneBadge>
       <button
         type="button"
-        :class="`ml-auto ${buttonStyles({ variant: 'ghost', size: 'small' })}`"
+        class="ml-auto"
+        :class="buttonStyles({ variant: 'ghost', size: 'small' })"
         @click="handleResetClick"
       >
         Reset demo

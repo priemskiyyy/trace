@@ -1,11 +1,13 @@
 <script lang="ts">
   import type { Receipt } from "@priemskiyyy/trace";
-  import type { RegisteredDestinationName } from "@priemskiyyy/trace-svelte";
   import { useTrace } from "@priemskiyyy/trace-svelte";
 
-  import type { createCart } from "example-shared/boutique/cart/createCart";
+  import { getCartItemCount } from "example-shared/boutique/cart/getCartItemCount";
   import { getCartTotal } from "example-shared/boutique/cart/getCartTotal";
+  import type { CartStore } from "example-shared/boutique/cart/types/CartStore";
   import { createOrderPayload } from "example-shared/boutique/checkout/createOrderPayload";
+  import type { BoutiqueDestination } from "example-shared/boutique/reporting/types/BoutiqueDestination";
+  import { formatItemCount } from "example-shared/formatting/formatItemCount";
   import { formatMoney } from "example-shared/formatting/formatMoney";
   import { buttonStyles } from "example-shared/ui/styles/buttonStyles";
   import BasePanel from "src/components/BasePanel/BasePanel.svelte";
@@ -13,14 +15,11 @@
   import { useObservable } from "src/utilities/useObservable.svelte";
 
   type Props = {
-    cart: ReturnType<typeof createCart>;
-    onCheckout: (
-      receipt: Receipt<RegisteredDestinationName>,
-      action: string,
-    ) => void;
+    cart: CartStore;
+    onReceipt: (receipt: Receipt<BoutiqueDestination>, action: string) => void;
   };
 
-  let { cart, onCheckout }: Props = $props();
+  let { cart, onReceipt }: Props = $props();
 
   const trace = useTrace();
   const state = useObservable(() => cart.state);
@@ -40,9 +39,9 @@
       createOrderPayload(current),
     );
 
-    onCheckout(
+    onReceipt(
       receipt,
-      `Buy ${current.lines.length} item${current.lines.length === 1 ? "" : "s"}`,
+      `Check out ${formatItemCount(getCartItemCount(current))}`,
     );
     cart.clear();
   };

@@ -1,12 +1,12 @@
 import { Eraser, Waveform } from "@phosphor-icons/react";
 import type React from "react";
 
+import type { BoutiqueRuntime } from "example-shared/boutique/reporting/types/BoutiqueRuntime";
 import { buttonStyles } from "example-shared/ui/styles/buttonStyles";
 import { EmptyState } from "src/components/EmptyState/EmptyState";
 import { Panel } from "src/components/Panel/Panel";
 import { TimelineRow } from "src/components/Timeline/TimelineRow";
 import { useEventLog } from "src/hooks/useEventLog";
-import type { BoutiqueRuntime } from "src/types/BoutiqueRuntime";
 
 type TimelinePanelProps = { runtime: BoutiqueRuntime };
 

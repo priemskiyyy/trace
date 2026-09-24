@@ -1,8 +1,8 @@
 <script lang="ts">
+  import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
   import BasePanel from "src/components/BasePanel/BasePanel.svelte";
   import EmptyState from "src/components/EmptyState/EmptyState.svelte";
   import LatestReceipt from "src/components/Shop/LatestReceipt.svelte";
-  import type { TrackedReceipt } from "src/types/TrackedReceipt";
 
   type Props = { tracked: TrackedReceipt | null };
 

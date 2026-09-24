@@ -3,13 +3,13 @@ import type { RegisteredDestinationName } from "@priemskiyyy/trace-react";
 import type React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
+import { OUTCOME_LABELS } from "example-shared/boutique/reporting/constants/labels";
+import { getOutcomeStatus } from "example-shared/boutique/reporting/getOutcomeStatus";
 import { formatLoss } from "example-shared/formatting/formatLoss";
 import { formatOutcome } from "example-shared/formatting/formatOutcome";
+import { OUTCOME_TONES } from "example-shared/ui/constants/tones";
 import { Badge } from "src/components/Badge/Badge";
 import { DESTINATION_GUIDES } from "src/utils/constants/destinations";
-import { OUTCOME_LABELS } from "src/utils/constants/labels";
-import { OUTCOME_TONES } from "src/utils/constants/tones";
-import { getOutcomeStatus } from "src/utils/getOutcomeStatus";
 
 type DestinationOutcomeRowProps = {
   name: RegisteredDestinationName;

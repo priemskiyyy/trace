@@ -1,19 +1,20 @@
 import type { Receipt } from "@priemskiyyy/trace";
 import { TraceDevtools } from "@priemskiyyy/trace-devtools/solid";
-import type { RegisteredDestinationName } from "@priemskiyyy/trace-solid";
 import { TraceProvider } from "@priemskiyyy/trace-solid";
 import type { Component } from "solid-js";
 import { createSignal } from "solid-js";
 
 import { createCart } from "example-shared/boutique/cart/createCart";
 import type { ProductId } from "example-shared/boutique/catalog/types/ProductId";
+import { createTrackedReceipt } from "example-shared/boutique/reporting/createTrackedReceipt";
+import type { BoutiqueDestination } from "example-shared/boutique/reporting/types/BoutiqueDestination";
+import type { BoutiqueRuntime } from "example-shared/boutique/reporting/types/BoutiqueRuntime";
+import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
 import { ConsentBanner } from "src/components/Consent/ConsentBanner";
 import { PageHeader } from "src/components/PageHeader/PageHeader";
 import { CartPanel } from "src/components/Shop/CartPanel";
 import { ProductGrid } from "src/components/Shop/ProductGrid";
 import { ReceiptPanel } from "src/components/Shop/ReceiptPanel";
-import type { BoutiqueRuntime } from "src/types/BoutiqueRuntime";
-import type { TrackedReceipt } from "src/types/TrackedReceipt";
 
 type ApplicationProps = { runtime: BoutiqueRuntime };
 
@@ -21,15 +22,21 @@ export const Application: Component<ApplicationProps> = (props) => {
   const cart = createCart();
   const [tracked, setTracked] = createSignal<TrackedReceipt | null>(null);
 
-  const handleAdd = (productId: ProductId) => {
+  const handleAddPress = (productId: ProductId) => {
     cart.add(productId);
   };
 
-  const handleCheckout = (
-    receipt: Receipt<RegisteredDestinationName>,
+  const handleReceipt = (
+    receipt: Receipt<BoutiqueDestination>,
     action: string,
   ) => {
-    setTracked({ receipt, action, at: Date.now() });
+    setTracked(
+      createTrackedReceipt(props.runtime.trace, {
+        receipt,
+        action,
+        account: null,
+      }),
+    );
   };
 
   return (
@@ -50,8 +57,8 @@ export const Application: Component<ApplicationProps> = (props) => {
         <ConsentBanner />
         <div class="grid items-start gap-4 lg:grid-cols-2">
           <div class="flex flex-col gap-4">
-            <ProductGrid onAdd={handleAdd} />
-            <CartPanel cart={cart} onCheckout={handleCheckout} />
+            <ProductGrid onAddPress={handleAddPress} />
+            <CartPanel cart={cart} onReceipt={handleReceipt} />
           </div>
           <ReceiptPanel tracked={tracked()} />
         </div>

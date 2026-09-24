@@ -12,6 +12,7 @@
     "./types/*": "./types/*.ts",
     "./utils/*": "./utils/*.ts",
     "./ui/theme.css": "./ui/theme.css",
+    "./ui/constants/*": "./ui/constants/*.ts",
     "./ui/styles/*": "./ui/styles/*.ts",
     "./ui/types/*": "./ui/types/*.ts"
   },
@@ -33,6 +34,7 @@
     "@priemskiyyy/trace-segment-node": "workspace:*",
     "@priemskiyyy/trace-segment-react-native": "workspace:*",
     "class-variance-authority": "0.7.1",
+    "ts-pattern": "5.9.0",
     "zod": "4.1.12"
   }
 }

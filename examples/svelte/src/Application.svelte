@@ -1,18 +1,19 @@
 <script lang="ts">
   import type { Receipt } from "@priemskiyyy/trace";
-  import type { RegisteredDestinationName } from "@priemskiyyy/trace-svelte";
   import { TraceProvider } from "@priemskiyyy/trace-svelte";
 
   import { createCart } from "example-shared/boutique/cart/createCart";
   import type { ProductId } from "example-shared/boutique/catalog/types/ProductId";
+  import { createTrackedReceipt } from "example-shared/boutique/reporting/createTrackedReceipt";
+  import type { BoutiqueDestination } from "example-shared/boutique/reporting/types/BoutiqueDestination";
+  import type { BoutiqueRuntime } from "example-shared/boutique/reporting/types/BoutiqueRuntime";
+  import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
   import ConsentBanner from "src/components/Consent/ConsentBanner.svelte";
   import TraceDevtoolsHost from "src/components/Devtools/TraceDevtoolsHost.svelte";
   import PageHeader from "src/components/PageHeader/PageHeader.svelte";
   import CartPanel from "src/components/Shop/CartPanel.svelte";
   import ProductGrid from "src/components/Shop/ProductGrid.svelte";
   import ReceiptPanel from "src/components/Shop/ReceiptPanel.svelte";
-  import type { BoutiqueRuntime } from "src/types/BoutiqueRuntime";
-  import type { TrackedReceipt } from "src/types/TrackedReceipt";
 
   type Props = { runtime: BoutiqueRuntime };
 
@@ -20,15 +21,19 @@
   const cart = createCart();
   let tracked = $state<TrackedReceipt | null>(null);
 
-  const handleAdd = (productId: ProductId) => {
+  const handleAddPress = (productId: ProductId) => {
     cart.add(productId);
   };
 
-  const handleCheckout = (
-    receipt: Receipt<RegisteredDestinationName>,
+  const handleReceipt = (
+    receipt: Receipt<BoutiqueDestination>,
     action: string,
   ) => {
-    tracked = { receipt, action, at: Date.now() };
+    tracked = createTrackedReceipt(runtime.trace, {
+      receipt,
+      action,
+      account: null,
+    });
   };
 </script>
 
@@ -49,8 +54,8 @@
     <ConsentBanner />
     <div class="grid items-start gap-4 lg:grid-cols-2">
       <div class="flex flex-col gap-4">
-        <ProductGrid onAdd={handleAdd} />
-        <CartPanel {cart} onCheckout={handleCheckout} />
+        <ProductGrid onAddPress={handleAddPress} />
+        <CartPanel {cart} onReceipt={handleReceipt} />
       </div>
       <ReceiptPanel {tracked} />
     </div>

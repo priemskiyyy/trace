@@ -5,13 +5,13 @@ import { createEventLog } from "example-shared/utils/createEventLog";
 import { createValueStore } from "example-shared/utils/createValueStore";
 
 /**
- * The analytics-next instance in the page. `ready` starts false, as a load
- * that has not finished yet: the lab turns it on, then `trace.start()`
- * retries the destinations that failed to open.
+ * The analytics-next instance in the page, loaded. The lab turns `ready` off
+ * and restarts Trace to play a load that never finished, then turns it back
+ * on so `trace.start()` can retry the destination that failed to open.
  */
 export const createSimulatedSegment = () => {
   const inbox = createEventLog<ProviderCall>(20);
-  const ready = createValueStore(false);
+  const ready = createValueStore(true);
   const group = createValueStore<string | null>(null);
   let userId: string | null = null;
 

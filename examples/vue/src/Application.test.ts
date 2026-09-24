@@ -2,9 +2,9 @@ import { fireEvent, waitFor, within } from "@testing-library/dom";
 import { createApp } from "vue";
 import { afterEach, expect, test } from "vitest";
 
+import { startBoutique } from "example-shared/boutique/reporting/startBoutique";
+import type { BoutiqueRuntime } from "example-shared/boutique/reporting/types/BoutiqueRuntime";
 import Application from "src/Application.vue";
-import type { BoutiqueRuntime } from "src/types/BoutiqueRuntime";
-import { startBoutique } from "src/utils/startBoutique";
 
 const runtimes: BoutiqueRuntime[] = [];
 const disposals: (() => void)[] = [];
@@ -20,7 +20,7 @@ afterEach(() => {
 });
 
 const renderApplication = () => {
-  const runtime = startBoutique({ latency: 0 });
+  const { backend, providers, runtime } = startBoutique({ latency: 0 });
 
   runtimes.push(runtime);
 
@@ -34,7 +34,7 @@ const renderApplication = () => {
     root.remove();
   });
 
-  return { runtime, app: within(root) };
+  return { backend, providers, runtime, app: within(root) };
 };
 
 const press = (app: ReturnType<typeof within>, name: string) => {
@@ -66,7 +66,7 @@ test("Boutique opens with an empty cart and nothing tracked yet", () => {
 });
 
 test("checking out reaches every destination with the same accepted event", async () => {
-  const { app, runtime } = renderApplication();
+  const { app, backend, providers } = renderApplication();
 
   press(app, "Accept");
   fireEvent.click(
@@ -76,27 +76,27 @@ test("checking out reaches every destination with the same accepted event", asyn
 
   await waitForSettled(app);
 
-  expect(runtime.providers.amplitude.inbox.getSnapshot()[0]).toMatchObject({
+  expect(providers.amplitude.inbox.getSnapshot()[0]).toMatchObject({
     eventName: "Checkout Completed",
     body: { total: 128 },
   });
-  expect(runtime.providers.posthog.inbox.getSnapshot()[0]).toMatchObject({
+  expect(providers.posthog.inbox.getSnapshot()[0]).toMatchObject({
     eventName: "Checkout Completed",
     body: { total: 128 },
   });
-  expect(runtime.providers.mixpanel.inbox.getSnapshot()[0]).toMatchObject({
+  expect(providers.mixpanel.inbox.getSnapshot()[0]).toMatchObject({
     eventName: "Checkout Completed",
     body: { total: 128 },
   });
-  expect(runtime.providers.segment.inbox.getSnapshot()[0]).toMatchObject({
+  expect(providers.segment.inbox.getSnapshot()[0]).toMatchObject({
     eventName: "Checkout Completed",
     body: { total: 128 },
   });
-  expect(runtime.providers.gtag.inbox.getSnapshot()[0]).toMatchObject({
+  expect(providers.gtag.inbox.getSnapshot()[0]).toMatchObject({
     eventName: "purchase",
     body: { value: 128 },
   });
-  expect(runtime.backend.requests.getSnapshot()[0]).toMatchObject({
+  expect(backend.requests.getSnapshot()[0]).toMatchObject({
     outcome: "accepted",
   });
   expect(readOutcome(app, "Amplitude")).toContain("Submitted");
@@ -108,7 +108,7 @@ test("checking out reaches every destination with the same accepted event", asyn
 });
 
 test("a redacted card token never reaches any destination, and the receipt says so", async () => {
-  const { app, runtime } = renderApplication();
+  const { app, providers } = renderApplication();
 
   press(app, "Accept");
   fireEvent.click(
@@ -118,9 +118,9 @@ test("a redacted card token never reaches any destination, and the receipt says 
 
   await waitForSettled(app);
 
-  expect(
-    runtime.providers.amplitude.inbox.getSnapshot()[0]?.body,
-  ).not.toHaveProperty("payment.card.token");
+  expect(providers.amplitude.inbox.getSnapshot()[0]?.body).not.toHaveProperty(
+    "payment.card.token",
+  );
   expect(
     within(latestReceipt(app)).getAllByText(
       "properties.payment.card.token: redacted",
@@ -129,7 +129,7 @@ test("a redacted card token never reaches any destination, and the receipt says 
 });
 
 test("while consent is unknown only your own API receives events, and accepting opens the rest", async () => {
-  const { app, runtime } = renderApplication();
+  const { app, providers } = renderApplication();
 
   fireEvent.click(
     product(app, "Silk Scarf").getByRole("button", { name: "Add to cart" }),
@@ -139,7 +139,7 @@ test("while consent is unknown only your own API receives events, and accepting 
 
   expect(readOutcome(app, "Amplitude")).toContain("Not routed");
   expect(readOutcome(app, "Your API")).toContain("Submitted");
-  expect(runtime.providers.amplitude.inbox.getSnapshot()).toHaveLength(0);
+  expect(providers.amplitude.inbox.getSnapshot()).toHaveLength(0);
 
   press(app, "Accept");
   fireEvent.click(

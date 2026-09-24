@@ -29,14 +29,13 @@ export const createOrdersBackend = ({ latency }: { latency: number }) => {
 
   const request = async ({ event, signal }: HttpRequest) => {
     const startedAt = Date.now();
-    const account = event.identity.user?.id ?? null;
 
     try {
       await wait(state.get().latency, signal);
     } catch (error) {
       record({
-        orderId: event.id,
-        account,
+        event: { id: event.id, name: event.name },
+        user: event.identity.user,
         outcome: "aborted",
         duration: Date.now() - startedAt,
       });
@@ -49,8 +48,8 @@ export const createOrdersBackend = ({ latency }: { latency: number }) => {
     if (current.offline || current.failNext) {
       state.set({ ...current, failNext: false });
       record({
-        orderId: event.id,
-        account,
+        event: { id: event.id, name: event.name },
+        user: event.identity.user,
         outcome: "failed",
         duration: Date.now() - startedAt,
       });
@@ -59,8 +58,8 @@ export const createOrdersBackend = ({ latency }: { latency: number }) => {
     }
 
     record({
-      orderId: event.id,
-      account,
+      event: { id: event.id, name: event.name },
+      user: event.identity.user,
       outcome: "accepted",
       duration: Date.now() - startedAt,
     });

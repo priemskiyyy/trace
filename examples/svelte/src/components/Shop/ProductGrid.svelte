@@ -8,9 +8,9 @@
   import { buttonStyles } from "example-shared/ui/styles/buttonStyles";
   import { CARD_CLASS_NAME } from "example-shared/ui/styles/cardStyles";
 
-  type Props = { onAdd: (productId: ProductId) => void };
+  type Props = { onAddPress: (productId: ProductId) => void };
 
-  let { onAdd }: Props = $props();
+  let { onAddPress }: Props = $props();
 </script>
 
 <ul aria-label="Products" class="grid gap-3 sm:grid-cols-3">
@@ -27,7 +27,7 @@
       <button
         type="button"
         class={buttonStyles({ size: "small" })}
-        onclick={() => onAdd(productId)}
+        onclick={() => onAddPress(productId)}
       >
         Add to cart
       </button>

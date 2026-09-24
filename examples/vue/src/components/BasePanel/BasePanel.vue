@@ -7,7 +7,8 @@ defineProps<{ title: string; shows: string }>();
 <template>
   <section
     :aria-label="title"
-    :class="`flex h-full min-w-0 flex-col gap-4 p-5 ${CARD_CLASS_NAME}`"
+    class="flex h-full min-w-0 flex-col gap-4 p-5"
+    :class="CARD_CLASS_NAME"
   >
     <header class="flex flex-col gap-1.5">
       <h3

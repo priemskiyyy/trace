@@ -2,10 +2,10 @@
 import { useTraceStatus } from "@priemskiyyy/trace-vue";
 import { computed } from "vue";
 
+import { TRACE_STATUS_LABELS } from "example-shared/boutique/reporting/constants/labels";
+import { TRACE_STATUS_TONES } from "example-shared/ui/constants/tones";
 import { dotStyles } from "example-shared/ui/styles/dotStyles";
 import ToneBadge from "src/components/Badge/ToneBadge.vue";
-import { TRACE_STATUS_LABELS } from "src/utils/constants/labels";
-import { TRACE_STATUS_TONES } from "src/utils/constants/tones";
 
 const status = useTraceStatus();
 const tone = computed(() => TRACE_STATUS_TONES[status.value.state]);

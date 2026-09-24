@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { DESTINATION_NAMES } from "example-shared/boutique/reporting/constants/destinations";
+import { getReceiptDisplay } from "example-shared/boutique/reporting/getReceiptDisplay";
+import type { TrackedReceipt } from "example-shared/boutique/reporting/types/TrackedReceipt";
 import ToneBadge from "src/components/Badge/ToneBadge.vue";
 import DestinationOutcomeRow from "src/components/Shop/DestinationOutcomeRow.vue";
 import { useObservable } from "src/composables/useObservable";
-import type { TrackedReceipt } from "src/types/TrackedReceipt";
-import { DESTINATION_NAMES } from "src/utils/constants/destinations";
-import { getReceiptDisplay } from "src/utils/getReceiptDisplay";
 
 const props = defineProps<{ tracked: TrackedReceipt }>();
 

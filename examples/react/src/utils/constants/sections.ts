@@ -2,23 +2,25 @@ import type { Section } from "src/types/Section";
 import type { SectionId } from "src/types/SectionId";
 
 export const SECTIONS: Record<SectionId, Section> = {
-  shop: { number: 1, title: "Browse and check out", label: "Shop" },
-  accounts: {
+  shop: { number: 1, title: "One checkout, six answers", label: "Shop" },
+  receipts: {
     number: 2,
-    title: "Sign in, switch, sign out",
-    label: "Accounts",
+    title: "Every event keeps its shopper",
+    label: "Receipts",
   },
-  teams: { number: 3, title: "Join a crew", label: "Teams" },
-  consent: { number: 4, title: "The consent banner", label: "Consent" },
-  lab: { number: 5, title: "Break the destinations", label: "Lab" },
-  timeline: { number: 6, title: "Watch it happen", label: "Timeline" },
+  destinations: {
+    number: 3,
+    title: "Consent reaches every destination",
+    label: "Destinations",
+  },
+  lab: { number: 4, title: "Break one destination", label: "Lab" },
+  timeline: { number: 5, title: "Watch it happen", label: "Timeline" },
 };
 
 export const SECTION_IDS: SectionId[] = [
   "shop",
-  "accounts",
-  "teams",
-  "consent",
+  "receipts",
+  "destinations",
   "lab",
   "timeline",
 ];

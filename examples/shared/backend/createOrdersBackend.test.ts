@@ -30,8 +30,11 @@ test("an accepted request is logged and acknowledged with a short id", async () 
   const [logged] = backend.requests.getSnapshot();
 
   expect(logged).toMatchObject({
-    orderId: "11112222-3333-4444-5555-666677778888",
-    account: "nora",
+    event: {
+      id: "11112222-3333-4444-5555-666677778888",
+      name: "Checkout Completed",
+    },
+    user: { id: "nora" },
     outcome: "accepted",
   });
 });
@@ -95,7 +98,7 @@ test("a signal aborted before the request starts settles as aborted", async () =
     }),
   ).rejects.toThrow("stopped");
   expect(backend.requests.getSnapshot()[0]).toMatchObject({
-    account: null,
+    user: null,
     outcome: "aborted",
   });
 });

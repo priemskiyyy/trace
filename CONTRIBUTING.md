@@ -4,7 +4,6 @@ Use Node 22.18 or newer and the pnpm version in `package.json`. Run `pnpm instal
 
 ## Layout
 
-
 - `packages/core`: the runtime, published as `@priemskiyyy/trace` with the `./mock` and `./testing` subpaths.
 - `packages/adapters/*`: one package per provider SDK API, published as `@priemskiyyy/trace-<name>`. A React Native or Node SDK with a different API gets its own package whose factory keeps the provider's name; Amplitude's browser and React Native SDKs share their API, so one package serves both. Packages share nothing privately.
 - `packages/react`, `packages/vue`, `packages/solid`, `packages/svelte`: the bindings, one surface in each framework's own idiom.
@@ -61,6 +60,7 @@ An adapter is a plain `{ name, open }`, and `open` returns a session. It maps on
 7. **Context goes under properties**, properties winning. A context key a property shadows is an `omitted` loss.
 8. **Say what the provider cannot carry**: a loss per path, `skipped: unsupported` for an event the provider has no notion of. Never move identity into properties to compensate.
 9. **Answer, do not throw.** When an SDK swallows its own error, answer `failed` with `TraceError` `DELIVERY_FAILED`. An identity method that cannot do this particular update throws `TraceError` `UNSUPPORTED`, which counts as done for `identify`, `traits` and `group`; an adapter whose SDK cannot reset omits `reset` instead, because a `reset` that throws, `UNSUPPORTED` included, leaves the applied state unknown.
+10. **Evidence is the weakest the SDK proves.**
 11. **`collection` only for a reversible, non-destructive switch.** A switch that deletes a profile or cannot be turned back on is left out and the README says why.
 12. **When `track` awaits anything account-dependent**, compare `context.currentGeneration()` with `event.identity.generation` and answer `skipped: auth-subject-mismatch` when an identified event's generation has passed.
 13. **Methods of `<Name>Like` use property syntax.** Method syntax only on a member that needs parameter bivariance, with the one-line reason "A method, so that ..." (Flare's practice).

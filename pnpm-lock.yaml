@@ -204,6 +204,103 @@ importers:
         specifier: 4.1.12
         version: 4.1.12
 
+  examples/react:
+    dependencies:
+      '@phosphor-icons/react':
+        specifier: 2.1.10
+        version: 2.1.10(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@priemskiyyy/trace':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@priemskiyyy/trace-amplitude':
+        specifier: workspace:*
+        version: link:../../packages/adapters/amplitude
+      '@priemskiyyy/trace-devtools':
+        specifier: workspace:*
+        version: link:../../packages/devtools
+      '@priemskiyyy/trace-google-analytics':
+        specifier: workspace:*
+        version: link:../../packages/adapters/google-analytics
+      '@priemskiyyy/trace-http':
+        specifier: workspace:*
+        version: link:../../packages/adapters/http
+      '@priemskiyyy/trace-mixpanel':
+        specifier: workspace:*
+        version: link:../../packages/adapters/mixpanel
+      '@priemskiyyy/trace-posthog':
+        specifier: workspace:*
+        version: link:../../packages/adapters/posthog
+      '@priemskiyyy/trace-react':
+        specifier: workspace:*
+        version: link:../../packages/react
+      '@priemskiyyy/trace-segment':
+        specifier: workspace:*
+        version: link:../../packages/adapters/segment
+      class-variance-authority:
+        specifier: 0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
+      example-shared:
+        specifier: workspace:*
+        version: link:../shared
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
+    devDependencies:
+      '@tailwindcss/vite':
+        specifier: 4.3.3
+        version: 4.3.3(vite@8.3.0(@types/node@22.20.2)(jiti@2.7.0)(terser@5.51.2))
+      '@types/react':
+        specifier: 19.2.17
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: 19.2.7
+        version: 19.2.7(@types/react@19.2.17)
+      tailwindcss:
+        specifier: 4.3.3
+        version: 4.3.3
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+      vite:
+        specifier: 8.3.0
+        version: 8.3.0(@types/node@22.20.2)(jiti@2.7.0)(terser@5.51.2)
+
+  examples/shared:
+    dependencies:
+      '@priemskiyyy/trace':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@priemskiyyy/trace-amplitude':
+        specifier: workspace:*
+        version: link:../../packages/adapters/amplitude
+      '@priemskiyyy/trace-google-analytics':
+        specifier: workspace:*
+        version: link:../../packages/adapters/google-analytics
+      '@priemskiyyy/trace-http':
+        specifier: workspace:*
+        version: link:../../packages/adapters/http
+      '@priemskiyyy/trace-mixpanel':
+        specifier: workspace:*
+        version: link:../../packages/adapters/mixpanel
+      '@priemskiyyy/trace-posthog':
+        specifier: workspace:*
+        version: link:../../packages/adapters/posthog
+      '@priemskiyyy/trace-segment':
+        specifier: workspace:*
+        version: link:../../packages/adapters/segment
+      class-variance-authority:
+        specifier: 0.7.1
+        version: 0.7.1
+      zod:
+        specifier: 4.1.12
+        version: 4.1.12
+
   packages/adapters/ampli:
     dependencies:
       '@amplitude/analytics-browser':

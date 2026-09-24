@@ -1,0 +1,36 @@
+{
+  "name": "example-react",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit -p . && vite build",
+    "preview": "vite preview",
+    "lint:typescript": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "2.1.10",
+    "@priemskiyyy/trace": "workspace:*",
+    "@priemskiyyy/trace-amplitude": "workspace:*",
+    "@priemskiyyy/trace-devtools": "workspace:*",
+    "@priemskiyyy/trace-google-analytics": "workspace:*",
+    "@priemskiyyy/trace-http": "workspace:*",
+    "@priemskiyyy/trace-mixpanel": "workspace:*",
+    "@priemskiyyy/trace-posthog": "workspace:*",
+    "@priemskiyyy/trace-react": "workspace:*",
+    "@priemskiyyy/trace-segment": "workspace:*",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "example-shared": "workspace:*",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.7",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.8.3",
+    "vite": "8.3.0"
+  }
+}

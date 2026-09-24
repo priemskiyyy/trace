@@ -1,0 +1,32 @@
+{
+  "name": "example-shared",
+  "private": true,
+  "type": "module",
+  "description": "The Boutique domain shared by every example: the event registry, the catalog, cart and checkout, one simulated SDK per destination, the in-page HTTP backend and the Tailwind styles.",
+  "exports": {
+    "./boutique/*": "./boutique/*.ts",
+    "./simulated/*": "./simulated/*.ts",
+    "./backend/*": "./backend/*.ts",
+    "./lab/*": "./lab/*.ts",
+    "./formatting/*": "./formatting/*.ts",
+    "./types/*": "./types/*.ts",
+    "./utils/*": "./utils/*.ts",
+    "./ui/theme.css": "./ui/theme.css",
+    "./ui/styles/*": "./ui/styles/*.ts",
+    "./ui/types/*": "./ui/types/*.ts"
+  },
+  "scripts": {
+    "lint:typescript": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@priemskiyyy/trace": "workspace:*",
+    "@priemskiyyy/trace-amplitude": "workspace:*",
+    "@priemskiyyy/trace-google-analytics": "workspace:*",
+    "@priemskiyyy/trace-http": "workspace:*",
+    "@priemskiyyy/trace-mixpanel": "workspace:*",
+    "@priemskiyyy/trace-posthog": "workspace:*",
+    "@priemskiyyy/trace-segment": "workspace:*",
+    "class-variance-authority": "0.7.1",
+    "zod": "4.1.12"
+  }
+}

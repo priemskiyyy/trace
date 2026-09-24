@@ -1,4 +1,5 @@
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import vue from "@vitejs/plugin-vue";
 import { existsSync, readdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import solid from "vite-plugin-solid";
@@ -153,6 +154,113 @@ const bindingProjects = Object.entries(bindings).flatMap(([name, projects]) => {
   return projects;
 });
 
+// Every example gets its project here, added only once its directory exists,
+// so a later task that adds one never has to edit this file.
+const examples: Record<string, TestProjectConfiguration[]> = {
+  shared: [
+    {
+      extends: true,
+      test: {
+        name: "example-shared",
+        include: ["examples/shared/**/*.test.ts"],
+      },
+    },
+  ],
+  react: [
+    {
+      extends: true,
+      resolve: {
+        alias: {
+          src: fileURLToPath(new URL("./examples/react/src", import.meta.url)),
+        },
+        dedupe: ["react", "react-dom"],
+      },
+      test: {
+        name: "example-react",
+        include: ["examples/react/src/**/*.test.{ts,tsx}"],
+        environment: "jsdom",
+      },
+    },
+  ],
+  vue: [
+    {
+      extends: true,
+      plugins: [vue()],
+      resolve: {
+        alias: {
+          src: fileURLToPath(new URL("./examples/vue/src", import.meta.url)),
+        },
+        dedupe: ["vue"],
+      },
+      test: {
+        name: "example-vue",
+        include: ["examples/vue/src/**/*.test.ts"],
+        environment: "jsdom",
+      },
+    },
+  ],
+  solid: [
+    {
+      extends: true,
+      plugins: [solid()],
+      resolve: {
+        alias: {
+          src: fileURLToPath(new URL("./examples/solid/src", import.meta.url)),
+        },
+        conditions: ["development", "browser"],
+        dedupe: ["solid-js"],
+      },
+      test: {
+        name: "example-solid",
+        include: ["examples/solid/src/**/*.test.{ts,tsx}"],
+        environment: "jsdom",
+        server: { deps: { inline: [/solid-js/, /@solidjs\/testing-library/] } },
+      },
+    },
+  ],
+  svelte: [
+    {
+      extends: true,
+      plugins: [svelte({ configFile: false })],
+      resolve: {
+        alias: {
+          src: fileURLToPath(new URL("./examples/svelte/src", import.meta.url)),
+        },
+        conditions: ["browser"],
+      },
+      test: {
+        name: "example-svelte",
+        include: ["examples/svelte/src/**/*.test.ts"],
+        environment: "jsdom",
+      },
+    },
+  ],
+  server: [
+    {
+      extends: true,
+      resolve: {
+        alias: {
+          src: fileURLToPath(new URL("./examples/server/src", import.meta.url)),
+        },
+      },
+      test: {
+        name: "example-server",
+        include: ["examples/server/src/**/*.test.ts"],
+      },
+    },
+  ],
+};
+
+const exampleProjects = Object.entries(examples).flatMap(([name, projects]) => {
+  if (
+    !existsSync(new URL(`./examples/${name}/package.json`, import.meta.url))
+  ) {
+    return [];
+  }
+
+  return projects;
+});
+
 const devtoolsAlias = {
   src: fileURLToPath(new URL("./packages/devtools/src", import.meta.url)),
   // The wrappers import the inspector by its package name, which resolves to the source here.
@@ -216,6 +324,7 @@ export default defineConfig({
       devtoolsProject,
       devtoolsSsrProject,
       ...adapterProjects,
+      ...exampleProjects,
     ],
   },
 });

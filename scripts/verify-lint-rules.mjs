@@ -269,6 +269,10 @@ const allowed = [
     "examples/vue/src/Application.vue",
   ],
   ["export interface Register {}", "packages/react/src/types/Register.ts"],
+  [
+    'declare module "@priemskiyyy/trace-react" {\n  interface Register {\n    trace: unknown;\n  }\n}\n\nexport {};',
+    "examples/react/src/types/Register.d.ts",
+  ],
 ];
 
 const getRuleIds = async (code, filePath) => {

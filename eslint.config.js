@@ -143,8 +143,12 @@ export default tseslint.config(
     },
   },
   {
-    // Declaration merging needs an interface, so each binding's Register is one.
-    files: ["packages/{react,vue,solid,svelte}/src/types/Register.ts"],
+    // Declaration merging needs an interface, so each binding's Register is
+    // one, and so is every example's augmentation of it.
+    files: [
+      "packages/{react,vue,solid,svelte}/src/types/Register.ts",
+      "examples/*/src/types/Register.d.ts",
+    ],
     rules: {
       "@typescript-eslint/consistent-type-definitions": "off",
       "@typescript-eslint/no-empty-object-type": "off",

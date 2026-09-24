@@ -1,0 +1,60 @@
+{
+  "name": "@priemskiyyy/trace-posthog-react-native",
+  "version": "0.1.0",
+  "description": "PostHog destination for Trace on React Native: each event is one capture with its timestamp and uuid, over the posthog-react-native client you inject.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/priemskiyyy/trace.git",
+    "directory": "packages/adapters/posthog-react-native"
+  },
+  "bugs": {
+    "url": "https://github.com/priemskiyyy/trace/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint:typescript": "tsc --noEmit -p .",
+    "lint:eslint": "eslint src",
+    "test:unit": "vitest run --root ../../.. --project posthog-react-native"
+  },
+  "peerDependencies": {
+    "@priemskiyyy/trace": ">=0.1.0 <0.2",
+    "posthog-react-native": ">=4.77.0 <5"
+  },
+  "peerDependenciesMeta": {
+    "posthog-react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@priemskiyyy/trace": "workspace:*"
+  },
+  "keywords": [
+    "posthog",
+    "product-analytics",
+    "react-native",
+    "typescript",
+    "trace",
+    "adapter"
+  ],
+  "homepage": "https://priemskiyyy.github.io/trace/"
+}

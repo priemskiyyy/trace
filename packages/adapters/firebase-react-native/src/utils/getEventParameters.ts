@@ -35,16 +35,18 @@ export const getEventParameters = (
       name,
       value,
       path: `parameters.${name}`,
+      isShadowed: false,
     })),
     ...Object.entries(context).map(([name, value]) => ({
       name,
       value,
       path: `context.${name}`,
+      isShadowed: Object.hasOwn(parameters, name),
     })),
   ];
 
-  for (const { name, value, path } of entries) {
-    if (Object.hasOwn(sent, name) || CONTROL_PARAMETERS.includes(name)) {
+  for (const { name, value, path, isShadowed } of entries) {
+    if (isShadowed || CONTROL_PARAMETERS.includes(name)) {
       losses.push({ path, reason: "omitted" });
 
       continue;

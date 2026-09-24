@@ -71,6 +71,33 @@ test("the names gtag.js treats as commands are ordinary parameters here, since R
   ).toEqual({ parameters: commands, losses: [] });
 });
 
+test("a context key the mapping also names is omitted, even when the mapping's own value for it is not sent", () => {
+  expect(
+    getEventParameters(
+      { name: "login", parameters: { extend_session: "yes" } },
+      { extend_session: 1 },
+    ),
+  ).toEqual({
+    parameters: {},
+    losses: [
+      { path: "parameters.extend_session", reason: "invalid" },
+      { path: "context.extend_session", reason: "omitted" },
+    ],
+  });
+  expect(
+    getEventParameters(
+      { name: "login", parameters: getParameters(26) },
+      { p25: 25 },
+    ),
+  ).toEqual({
+    parameters: getParameters(25),
+    losses: [
+      { path: "parameters.p25", reason: "truncated" },
+      { path: "context.p25", reason: "omitted" },
+    ],
+  });
+});
+
 test("a parameter or a context key named items never replaces the items the mapping built", () => {
   const items = [{ item_id: "sku_1" }];
 
@@ -450,14 +477,20 @@ test("text or null under extend_session is left out as invalid and leaves its sl
         name: "login",
         parameters: { extend_session: "yes", ...getParameters(24) },
       },
+      { source: "newsletter" },
+    ),
+  ).toEqual({
+    parameters: { ...getParameters(24), source: "newsletter" },
+    losses: [{ path: "parameters.extend_session", reason: "invalid" }],
+  });
+  expect(
+    getEventParameters(
+      { name: "login", parameters: getParameters(24) },
       { extend_session: null, source: "newsletter" },
     ),
   ).toEqual({
     parameters: { ...getParameters(24), source: "newsletter" },
-    losses: [
-      { path: "parameters.extend_session", reason: "invalid" },
-      { path: "context.extend_session", reason: "invalid" },
-    ],
+    losses: [{ path: "context.extend_session", reason: "invalid" }],
   });
 });
 

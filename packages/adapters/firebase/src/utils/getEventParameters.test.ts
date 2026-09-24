@@ -201,6 +201,33 @@ test.each(["select_content", "login", "generate_lead", "my_event", "Purchase"])(
   },
 );
 
+test("a context key the mapping also names is omitted, even when the mapping's own value for it is not sent", () => {
+  expect(
+    getEventParameters(
+      { name: "login", parameters: { "bad name": 1 } },
+      { "bad name": 2 },
+    ),
+  ).toEqual({
+    parameters: {},
+    losses: [
+      { path: "parameters.bad name", reason: "invalid" },
+      { path: "context.bad name", reason: "omitted" },
+    ],
+  });
+  expect(
+    getEventParameters(
+      { name: "login", parameters: getParameters(26) },
+      { p25: 25 },
+    ),
+  ).toEqual({
+    parameters: getParameters(25),
+    losses: [
+      { path: "parameters.p25", reason: "truncated" },
+      { path: "context.p25", reason: "omitted" },
+    ],
+  });
+});
+
 test("a parameter or a context key named items never replaces the items the mapping built", () => {
   const items = [{ item_id: "sku_1" }];
 

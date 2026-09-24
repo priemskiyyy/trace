@@ -21,11 +21,17 @@
   "dependencies": {
     "@priemskiyyy/trace": "workspace:*",
     "@priemskiyyy/trace-amplitude": "workspace:*",
+    "@priemskiyyy/trace-firebase-react-native": "workspace:*",
     "@priemskiyyy/trace-google-analytics": "workspace:*",
     "@priemskiyyy/trace-http": "workspace:*",
     "@priemskiyyy/trace-mixpanel": "workspace:*",
+    "@priemskiyyy/trace-mixpanel-react-native": "workspace:*",
     "@priemskiyyy/trace-posthog": "workspace:*",
+    "@priemskiyyy/trace-posthog-node": "workspace:*",
+    "@priemskiyyy/trace-posthog-react-native": "workspace:*",
     "@priemskiyyy/trace-segment": "workspace:*",
+    "@priemskiyyy/trace-segment-node": "workspace:*",
+    "@priemskiyyy/trace-segment-react-native": "workspace:*",
     "class-variance-authority": "0.7.1",
     "zod": "4.1.12"
   }

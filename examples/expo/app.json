@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Boutique",
+    "slug": "trace-boutique",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "platforms": ["ios", "android", "web"],
+    "ios": {
+      "bundleIdentifier": "dev.trace.example"
+    },
+    "android": {
+      "package": "dev.trace.example"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

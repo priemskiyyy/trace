@@ -2,6 +2,8 @@
 
 Svelte bindings for [Trace](../core): a provider, `useTrace`, and three utilities that observe the Trace's status, one destination's status and consent. They are deliberately thin. Events are tracked with `trace.current.track`, and the bindings never start, dispose or track anything.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 Works in Svelte 5.7 or newer. The package ships Svelte sources, so it is compiled by your application's own Svelte.
 
 ## Installation

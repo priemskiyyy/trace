@@ -2,6 +2,8 @@
 
 Typed, provider-independent product analytics for TypeScript, on the web, in React Native and on servers. The core owns how an event is declared, validated, sanitized, given its identity, gated by consent, routed and handed to each destination, and it answers a receipt that says what each destination did with it. Adapters translate one sanitized event for Amplitude, PostHog, Mixpanel, Segment, Google Analytics, Firebase, your own backend or the console, over an SDK your application already initialized.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 No dependencies, ESM only, no side effects on import.
 
 ## Installation

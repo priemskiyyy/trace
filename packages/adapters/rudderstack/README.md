@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to RudderStack in the browser. You pass in the `RudderAnalytics` instance your application created, so this package imports no SDK. Each event is one `track` call carrying its time as the original timestamp, and the user, their traits and one group type become RudderStack's own `identify` and `group` calls. The adapter reports what RudderStack drops on its own: reserved names, and every `null`.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

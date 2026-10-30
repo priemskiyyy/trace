@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Segment from React Native. You pass in the analytics-react-native client your application created, so this package imports no SDK. Each event is one `track` call whose enrichment sets its time and its id as the message id, and the user, their traits and one group type become Segment's own `identify` and `group` calls. In the browser, use `@priemskiyyy/trace-segment`; on a server, `@priemskiyyy/trace-segment-node`.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

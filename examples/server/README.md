@@ -11,7 +11,7 @@ pnpm --filter example-server dev
 ```
 
 `dev` builds the server with Vite's SSR build and runs the bundle, as
-Switchboard's does, so the `src/*` imports every file uses resolve the same
+Prism's does, so the `src/*` imports every file uses resolve the same
 way they do under Vitest.
 
 The boundary file is `src/forwardTrackedEvent.ts`: everything above it is the

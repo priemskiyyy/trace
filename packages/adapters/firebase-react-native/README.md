@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Google Analytics through React Native Firebase on iOS and Android. You inject the modular `@react-native-firebase/analytics` API and the `Analytics` instance your application already uses, so this package imports neither. A map typed by your event registry turns each event into the GA4 event you choose, such as `begin_checkout` with its `items`, or keeps it from GA4. The adapter checks what the map built against Google's rules and React Native Firebase's own, lists on the receipt everything that did not fit, and answers once the native SDK has taken each event.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

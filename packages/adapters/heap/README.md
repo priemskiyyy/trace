@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Heap in the browser. You pass in the heap.js global your page loaded, so this package imports no SDK. Each event is one `track` call with its context under its properties, and the user and their traits become Heap's own identity and user properties.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

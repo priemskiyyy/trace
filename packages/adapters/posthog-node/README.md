@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to PostHog from a server. You pass in the `posthog-node` client your application constructed, so this package imports no SDK. A server builds one Trace per request or job over that shared client, and each event is one `capture` for its user or the visitor's anonymous id, with its memberships as groups, its time and its id as `uuid`; traits and group traits become updates for the same distinct id, and a sign-in merges the visitor into the user. In the browser, use [`@priemskiyyy/trace-posthog`](../posthog); on React Native, [`@priemskiyyy/trace-posthog-react-native`](../posthog-react-native).
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

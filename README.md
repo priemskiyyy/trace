@@ -2,6 +2,8 @@
 
 **Typed, provider-independent product analytics for TypeScript.**
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 Track events through one small API. Configuration decides whether they go to Amplitude, PostHog, Mixpanel, Segment, Google Analytics, Firebase, your own backend, the console, or several of them at once.
 
 ```ts

@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Mixpanel from a server. You pass in the client that the `mixpanel` package's `init` returned, so this package imports no SDK. A server builds one Trace per request or job over that shared client, and each event is one request for its user and the visitor's anonymous id, carrying its time and its id, answered once Mixpanel accepted it; traits and groups become profile and group updates for the user each update names. In the browser, use `@priemskiyyy/trace-mixpanel`; on React Native, `@priemskiyyy/trace-mixpanel-react-native`.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

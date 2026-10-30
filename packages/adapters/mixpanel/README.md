@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Mixpanel in the browser. You pass in the mixpanel-browser instance your application initialized, so this package imports no SDK. Each event is one `track` call carrying its time and its id, and the user, their traits and their groups become Mixpanel's own identify, profile and group calls. On React Native, use `@priemskiyyy/trace-mixpanel-react-native`; on a server, `@priemskiyyy/trace-mixpanel-node`.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

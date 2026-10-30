@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Fathom. You pass in `fathom-client`, which your application loads, so this package imports no SDK. Fathom keeps an event's name and, when it has one, its value in cents, and nothing else: the value comes from a function you give the adapter, and every property is reported as lost.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

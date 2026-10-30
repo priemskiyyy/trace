@@ -2,6 +2,8 @@
 
 An in-page inspector for [Trace](../core). It shows where each destination stands, whose events they are and which consent decisions apply, and a searchable timeline of every accepted event and of what each destination did with it.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 It reads `trace.diagnostics` and `trace.events` and nothing else. It never starts the Trace, opens a destination or tracks an event, and it keeps an event's values hidden until you ask to see them.
 
 The inspector is framework independent. It carries its own small UI runtime inside its bundle and renders in a shadow root, so your application needs nothing installed for it, and neither side's styles reach the other.

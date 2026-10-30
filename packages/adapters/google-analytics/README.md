@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Google Analytics 4 on the web through the Google tag. You inject the `gtag` function your page's Google tag already defined and the measurement id of your GA4 data stream, so this package imports nothing. A map typed by your event registry turns each event into the GA4 event you choose, such as `begin_checkout` with its `items`, or keeps it from GA4. The adapter checks what the map built against Google's rules, lists on the receipt everything that did not fit, and sets the user id and user properties on the measurement before the events that need them.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

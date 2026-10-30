@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Umami as custom events. You pass in the `window.umami` tracker your page loaded, so this package imports no SDK. Each event is one `track` call in its function form, carrying its data and the id of the user it was tracked for, so identity travels with each event and never sticks to the page.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

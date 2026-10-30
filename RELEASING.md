@@ -22,6 +22,8 @@ No adapter is run against its provider's real backend or on a device, in continu
 
 ## npm trusted publishers
 
+The initial 0.1.0 publication is a preview and uses the `next` dist-tag. npm may also assign `latest` when a package is first created; the README remains the statement of preview status.
+
 All packages use the GitHub owner `priemskiyyy`, repository `trace`, workflow `publish.yml` and environment `npm`. Trusted publishing uses GitHub's short-lived OIDC identity, so the repository needs no npm token.
 
 The first publication of a new package requires an authenticated npm maintainer, because the package must exist before its trusted publisher can be configured. Publish the verified tarball from its artifact directory, then register the workflow. Do not create a GitHub release for that same version afterward.
@@ -30,7 +32,7 @@ The first publication of a new package requires an authenticated npm maintainer,
 npm login
 cd .artifacts/release/@priemskiyyy/trace
 shasum -a 256 -c SHA256SUMS
-npm publish priemskiyyy-trace-<version>.tgz --access public --tag latest
+npm publish priemskiyyy-trace-<version>.tgz --access public --tag next --ignore-scripts
 ```
 
 After the publish, register the trusted publisher, then require two-factor authentication and disallow tokens for the package. The workflow publishes through OIDC, which that setting does not affect. `npm trust` needs npm 11.15 or later. Older versions leave out the permission the registry requires and fail with a bare `400 Bad Request`.

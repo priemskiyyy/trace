@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to PostHog through the posthog-js instance your application already initialized. Each event is one `capture` with its timestamp and its id as `uuid`. Identity, person properties, groups and consent use PostHog's own calls, and the package imports no SDK. On React Native, use [`@priemskiyyy/trace-posthog-react-native`](../posthog-react-native); on a server, [`@priemskiyyy/trace-posthog-node`](../posthog-node).
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

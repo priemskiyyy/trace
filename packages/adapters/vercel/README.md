@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Vercel Web Analytics as custom events. You pass in the `track` of `@vercel/analytics` your application injected, so this package imports no SDK. Each event is one custom event with as many of its flat properties as your plan keeps. Its context is not sent, because it would take those few places.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

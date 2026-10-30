@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Amplitude through the browser or React Native SDK your application already initialized. Each event is one `track` call with its time and its id as `insert_id`, and a plugin you add to the SDK files it under the user and device it was tracked with. Identity, groups, consent and flush use Amplitude's own calls, and the package imports no SDK. For a generated Ampli wrapper, use [`@priemskiyyy/trace-ampli`](../ampli); on a server, [`@priemskiyyy/trace-amplitude-node`](../amplitude-node).
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

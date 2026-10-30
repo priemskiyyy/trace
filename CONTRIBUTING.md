@@ -22,7 +22,7 @@ Every `exports` entry is `types`, then `import`, then `default`, with `import` a
 
 ESLint enforces every rule it can check, and `pnpm test:lint` proves each one with a probe it must reject and, where a rule has exceptions, one it must allow. Change a rule and its probes together.
 
-- **ESLint** (Switchboard's banned syntax with Flare's re-export and Svelte blocks): `type` over `interface`, no `enum`, `switch`, `any`, `as` (including `as const`), angle-bracket assertions, non-null `!`, `void` operator, `??=`, `||=`, `&&=`, `readonly` in any form (`Readonly<>`, `readonly T[]`, readonly fields and mapped modifiers), `export *`, relative imports, or re-exports outside `index.ts`, `mock.ts` and `testing.ts`; `curly: all`; `no-else-return`; `consistent-type-imports`; and the blank-line rule:
+- **ESLint** (Prism's banned syntax with Flare's re-export and Svelte blocks): `type` over `interface`, no `enum`, `switch`, `any`, `as` (including `as const`), angle-bracket assertions, non-null `!`, `void` operator, `??=`, `||=`, `&&=`, `readonly` in any form (`Readonly<>`, `readonly T[]`, readonly fields and mapped modifiers), `export *`, relative imports, or re-exports outside `index.ts`, `mock.ts` and `testing.ts`; `curly: all`; `no-else-return`; `consistent-type-imports`; and the blank-line rule:
 
   ```js
   "padding-line-between-statements": [

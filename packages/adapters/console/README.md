@@ -2,6 +2,8 @@
 
 Print what [Trace](../../core) sends while you develop. The destination receives what every destination receives, so its output is already sanitized and redacted.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

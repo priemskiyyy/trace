@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events through the Ampli wrapper Amplitude generated from your tracking plan. `fromAmpli` declares the events from the generated classes, so the canonical names, required and optional properties, literal unions and the constants a generated constructor injects all come from the generated code and are never redefined. You pass in the `ampli` object your application loaded, so this package imports no SDK.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

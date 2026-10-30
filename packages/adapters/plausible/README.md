@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Plausible as custom events. You pass in the tracker your application initialized from `@plausible-analytics/tracker`, so this package imports no SDK. Each event becomes one custom event whose props are its flat properties and context as text, and the adapter answers once Plausible's callback reports the request. No user, trait or group ever reaches Plausible, which forbids identifiers.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

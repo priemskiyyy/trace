@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to your own backend, through your own client. You give the adapter one function that sends an event, and your client keeps everything it already owns: the address, authentication, headers, batching, retries and response handling.
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

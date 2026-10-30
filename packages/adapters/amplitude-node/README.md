@@ -2,6 +2,8 @@
 
 Send [Trace](../../core) events to Amplitude from a server. You pass in the `@amplitude/analytics-node` SDK your application initialized, and its `Identify` class, so this package imports no SDK. A server builds one Trace per request or job over that shared SDK, and each event is one `track` call for its user and the visitor's device, with its time and its id as `insert_id`; traits and groups become `identify`, `setGroup` and `groupIdentify` calls for the same ids. In the browser or on React Native, use [`@priemskiyyy/trace-amplitude`](../amplitude).
 
+Version 0.1.0 is an initial preview. APIs may change before 1.0. See the [verification limits](https://github.com/priemskiyyy/trace/blob/main/docs/verification.md) before adopting an adapter.
+
 ## Installation
 
 ```sh

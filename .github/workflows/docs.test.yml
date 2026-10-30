@@ -3,6 +3,22 @@ name: docs-test
 on:
   workflow_call:
   workflow_dispatch:
+  push:
+    branches:
+      - "main"
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "README.md"
+      - ".github/actions/setup/**"
+      - ".github/workflows/**"
+      - "docs/**"
+      - "examples/**"
+      - "packages/**"
+      - "scripts/verify-docs.mjs"
+      - "scripts/verify-snippets.mjs"
+      - "scripts/snippets.*.d.ts"
   pull_request:
     paths:
       - "package.json"

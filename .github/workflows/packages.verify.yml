@@ -10,7 +10,7 @@ on:
       - "pnpm-workspace.yaml"
       - "CHANGELOG.md"
       - ".github/actions/setup/**"
-      - ".github/workflows/packages.verify.yml"
+      - ".github/workflows/**"
       - "scripts/**"
       - "packages/**"
   push:
@@ -22,7 +22,7 @@ on:
       - "pnpm-workspace.yaml"
       - "CHANGELOG.md"
       - ".github/actions/setup/**"
-      - ".github/workflows/packages.verify.yml"
+      - ".github/workflows/**"
       - "scripts/**"
       - "packages/**"
 

@@ -6,6 +6,8 @@ description: "Trace is typed, provider-independent product analytics for TypeScr
 
 Trace is a product analytics library for web, React Native and server applications. You declare your events once, track them through one small API, and configuration decides which analytics providers receive them.
 
+Version 0.1.0 is an initial preview, available on npm under the `next` dist-tag. APIs may change before 1.0. Review the [verification limits](verification.md) before adopting an adapter.
+
 ```ts
 import { event, Trace } from "@priemskiyyy/trace";
 import { console } from "@priemskiyyy/trace-console";
